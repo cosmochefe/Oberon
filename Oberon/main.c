@@ -7,12 +7,13 @@
 //
 
 #include <stdio.h>
+#include <memory.h>
+#include <ctype.h>
 
-int main(int argc, const char * argv[])
-{
-
-	// insert code here...
-	printf("Hello, World!\n");
-    return 0;
+int main(int argc, const char *argv[]) {
+	FILE *source_code = fopen("Test.oberon", "r");
+	if (!source_code)
+		return 0;
+	fclose(source_code);
+	return 0;
 }
-
