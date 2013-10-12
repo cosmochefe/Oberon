@@ -6,9 +6,6 @@
 //  Copyright (c) 2013 Alvaro Costa Neto. All rights reserved.
 //
 
-#include <ctype.h>
-#include <strings.h>
-
 #include "scanner.h"
 
 //
@@ -29,27 +26,27 @@ char scanner_char;
 
 // Vetor com todas as palavras-chave da linguagem
 keyword_t scanner_keywords[] = {
-	{ .id = "do", .symbol = symbol_do },
-	{ .id = "if", .symbol = symbol_if },
-	{ .id = "of", .symbol = symbol_of },
-	{ .id = "or", .symbol = symbol_or },
-	{ .id = "end", .symbol = symbol_end },
-	{ .id = "mod", .symbol = symbol_mod },
-	{ .id = "var", .symbol = symbol_var },
-	{ .id = "else", .symbol = symbol_else },
-	{ .id = "then", .symbol = symbol_then },
-	{ .id = "type", .symbol = symbol_type },
-	{ .id = "array", .symbol = symbol_array },
-	{ .id = "begin", .symbol = symbol_begin },
-	{ .id = "const", .symbol = symbol_const },
-	{ .id = "elsif", .symbol = symbol_elsif },
-	{ .id = "until", .symbol = symbol_until },
-	{ .id = "while", .symbol = symbol_while },
-	{ .id = "record", .symbol = symbol_record },
-	{ .id = "repeat", .symbol = symbol_repeat },
-	{ .id = "procedure", .symbol = symbol_proc },
-	{ .id = "div", .symbol = symbol_div },
-	{ .id = "module", .symbol = symbol_module }
+	{ .id = "do",					.symbol = symbol_do },
+	{ .id = "if",					.symbol = symbol_if },
+	{ .id = "of",					.symbol = symbol_of },
+	{ .id = "or",					.symbol = symbol_or },
+	{ .id = "end",				.symbol = symbol_end },
+	{ .id = "mod",				.symbol = symbol_mod },
+	{ .id = "var",				.symbol = symbol_var },
+	{ .id = "else",				.symbol = symbol_else },
+	{ .id = "then",				.symbol = symbol_then },
+	{ .id = "type",				.symbol = symbol_type },
+	{ .id = "array",			.symbol = symbol_array },
+	{ .id = "begin",			.symbol = symbol_begin },
+	{ .id = "const",			.symbol = symbol_const },
+	{ .id = "elsif",			.symbol = symbol_elsif },
+	{ .id = "until",			.symbol = symbol_until },
+	{ .id = "while",			.symbol = symbol_while },
+	{ .id = "record",			.symbol = symbol_record },
+	{ .id = "repeat",			.symbol = symbol_repeat },
+	{ .id = "procedure",	.symbol = symbol_proc },
+	{ .id = "div",				.symbol = symbol_div },
+	{ .id = "module",			.symbol = symbol_module }
 };
 const index_t scanner_keywords_count = sizeof(scanner_keywords)	/ sizeof(keyword_t);
 
@@ -57,8 +54,27 @@ const index_t scanner_keywords_count = sizeof(scanner_keywords)	/ sizeof(keyword
 // Analisador léxico
 //
 
+// As funções “is_letter”, “is_digit” e “is_blank” chamam as versões internas da linguagem C. Por enquanto...
+boolean_t is_letter(char c) {
+	if (isalpha(c))
+		return true;
+	return false;
+}
+
+boolean_t is_digit(char c) {
+	if (isdigit(c))
+		return true;
+	return false;
+}
+
+boolean_t is_blank(char c) {
+	if (isspace(c))
+		return true;
+	return false;
+}
+
 // Esta função é responsável por verificar se o identificar “id” é uma palavra reservada ou não
-// O símbolo equivalente à palavra reservada é armazenada por referência no parâmetro “symbol”
+// O símbolo equivalente à palavra reservada é armazenado via referência no parâmetro “symbol”
 boolean_t is_keyword(id_t id, symbol_t *symbol) {
 	index_t index = 0;
 	while (index < scanner_keywords_count && strcasecmp(scanner_keywords[index].id, id) != 0)
@@ -94,7 +110,7 @@ void scanner_mark(const string_t message) {
 //
 // ATENÇÃO: todas as funções do analisador léxico devem garantir que “scanner_char” termine com o caractere subsequente
 // ao lexema reconhecido. Por exemplo, ao analisar “var x: integer”, a função “id“ será a primeira a ser invocada para
-// reconhecer “var”. Ao terminar, “scanner_char” deve conter o espaço em branco que o segue
+// reconhecer “var”. Ao terminar, “scanner_char” deve conter o espaço em branco entre “var” e “x”
 //
 // As funções “id”, “integer” e “number” fazem parte da EBNF e deveriam ser consideradas parte do analisador sintático.
 // No entanto, pela forma com que o compilador está definido, o reconhecimento de lexemas também é estipulado pela EBNF
@@ -103,12 +119,12 @@ void scanner_mark(const string_t message) {
 
 void id(symbol_t *symbol) {
 	index_t index = 0;
-	while (index < SCANNER_MAX_ID_LENGTH && isalnum(scanner_char)) {
+	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || is_digit(scanner_char))) {
 		scanner_id[index++] = scanner_char;
 		if (!scanner_step())
 			break;
 	}
-	// O tamanho máximo para um identificador é especificado por “id_length” e a variável “scanner_id” possui tamanho
+	// O tamanho máximo para um identificador é especificado por “id_length”, a variável “scanner_id” possui tamanho
 	// “id_length + 1” e por isso o caractere terminador pode ser incluído mesmo que o limite seja alcançado
 	scanner_id[index] = '\0';
 	if (!is_keyword(scanner_id, symbol) && symbol)
@@ -118,7 +134,7 @@ void id(symbol_t *symbol) {
 // FAZER: Adicionar verificação se o número é muito longo
 void integer(symbol_t *symbol) {
 	scanner_value = 0;
-	while (isdigit(scanner_char)) {
+	while (is_digit(scanner_char)) {
 		// Efetua o cálculo do valor, dígito-a-dígito, com base nos caracteres lidos
 		scanner_value = 10 * scanner_value + (scanner_char - '0');
 		if (!scanner_step())
@@ -154,7 +170,7 @@ void comment(symbol_t *symbol) {
 
 void scanner_get(symbol_t *symbol) {
 	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
-	while (isspace(scanner_char))
+	while (is_blank(scanner_char))
 		scanner_step();
 	if (feof(scanner_file)) {
 		*symbol = symbol_eof;
@@ -162,10 +178,10 @@ void scanner_get(symbol_t *symbol) {
 	}
 	// Os casos de um identificador ou um número são considerados separadamente para que o código no “switch” não precise
 	// incluir uma chamada a “scanner_step” em cada “case”
-	if (isalpha(scanner_char)) {
+	if (is_letter(scanner_char)) {
 		id(symbol);
 		return;
-	} else if (isdigit(scanner_char)) {
+	} else if (is_digit(scanner_char)) {
 		number(symbol);
 		return;
 	}

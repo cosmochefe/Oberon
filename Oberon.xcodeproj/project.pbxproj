@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C6603D841809D12C00002BA9 /* scanner.c in Sources */ = {isa = PBXBuildFile; fileRef = C6603D831809D12C00002BA9 /* scanner.c */; };
+		C6603D8A1809F7F600002BA9 /* parser.c in Sources */ = {isa = PBXBuildFile; fileRef = C6603D891809F7F600002BA9 /* parser.c */; };
 		C6D59E8E1808B6B9004BF291 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = C6D59E8D1808B6B9004BF291 /* main.c */; };
 		C6D59E901808B6B9004BF291 /* Oberon.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = C6D59E8F1808B6B9004BF291 /* Oberon.1 */; };
 /* End PBXBuildFile section */
@@ -29,6 +30,8 @@
 		C6603D831809D12C00002BA9 /* scanner.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = scanner.c; sourceTree = "<group>"; };
 		C6603D851809D14200002BA9 /* scanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scanner.h; sourceTree = "<group>"; };
 		C6603D871809D1C200002BA9 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		C6603D881809F7E600002BA9 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
+		C6603D891809F7F600002BA9 /* parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = parser.c; sourceTree = "<group>"; };
 		C6D59E8A1808B6B9004BF291 /* Oberon */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Oberon; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6D59E8D1808B6B9004BF291 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		C6D59E8F1808B6B9004BF291 /* Oberon.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Oberon.1; sourceTree = "<group>"; };
@@ -80,6 +83,8 @@
 				C6D59E8D1808B6B9004BF291 /* main.c */,
 				C6603D851809D14200002BA9 /* scanner.h */,
 				C6603D831809D12C00002BA9 /* scanner.c */,
+				C6603D881809F7E600002BA9 /* parser.h */,
+				C6603D891809F7F600002BA9 /* parser.c */,
 			);
 			path = Oberon;
 			sourceTree = "<group>";
@@ -136,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C6603D841809D12C00002BA9 /* scanner.c in Sources */,
+				C6603D8A1809F7F600002BA9 /* parser.c in Sources */,
 				C6D59E8E1808B6B9004BF291 /* main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

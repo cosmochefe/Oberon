@@ -71,6 +71,7 @@
 
 #include "types.h"
 #include "scanner.h"
+#include "parser.h"
 
 //
 // Constantes e definições gerais

@@ -9,6 +9,10 @@
 #ifndef Oberon_scanner_h
 #define Oberon_scanner_h
 
+#include <stdio.h>
+#include <strings.h>
+#include <ctype.h>
+
 #include "types.h"
 
 #define SCANNER_MAX_ID_LENGTH 16
@@ -78,6 +82,10 @@ typedef fpos_t position_t;
 //
 // Pré-definições
 //
+boolean_t is_letter(char c);
+boolean_t is_digit(char c);
+boolean_t is_blank(char c);
+boolean_t is_keyword(id_t id, symbol_t *symbol);
 void scanner_initialize(file_t file, position_t position);
 void scanner_get(symbol_t *symbol);
 
