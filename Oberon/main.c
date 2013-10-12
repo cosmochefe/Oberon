@@ -25,7 +25,7 @@
 //	- f0 f1: if (set_includes(EMPTY, first_set(f0)) set_union(first_set(t0), first_set(t1)) == EMPTY_SET;
 //	- [exp] ou {exp}: set_union(first_set(exp), follow_set(K)) == EMPTY_SET;
 //
-// EBNF da linguagem Oberon-0 (para “letter” e “digit”, usar as funções “is_alpha” e “is_digit”):
+// EBNF da linguagem Oberon-0 (para “letter” e “digit”, usar as funções “is_alpha”, “is_alnum” e “is_digit”):
 //	- id = letter {letter | digit}
 //	- integer = digit {digit}
 //	- selector = {"." id | "[" exp "]"}
@@ -49,11 +49,11 @@
 //	- type = id | array_type | record_type
 //	- formal_params_section = ["var"] id_list ":" type
 //	- formal_params = "(" [formal_params_section {";" formal_params_section}] ")"
-//	- proc_heading = "procedure" id [formal_params]
+//	- proc_head = "procedure" id [formal_params]
 //	- proc_body = declarations ["begin" stmt_sequence] "end" id
-//	- proc_declaration = proc_heading ";" proc_body
-//	- declarations = ["const" {id "=" exp ";"}] ["type" {id "=" type ";"}] ["var" {id_list ":" type ";"}] {proc_declaration ";"}
-//	- module = "module" id ";" declarations ["begin" stmt_sequence "end" id "."
+//	- proc_decl = proc_head ";" proc_body
+//	- declarations = ["const" {id "=" exp ";"}]["type" {id "=" type ";"}]["var" {id_list ":" type ";"}]{proc_decl ";"}
+//	- module = "module" id ";" declarations ["begin" stmt_sequence] "end" id "."
 //
 //	Vocabulário (para a análise léxica):
 //
@@ -77,6 +77,10 @@ enum boolean_ {
 	true = 1
 };
 typedef enum boolean_ boolean_t;
+
+typedef unsigned int index_t;
+typedef FILE * file_t;
+typedef char * string_t;
 
 //
 // Constantes e definições do analisador léxico
@@ -142,8 +146,6 @@ struct keyword_ {
 	symbol_t symbol;
 };
 typedef struct keyword_ keyword_t;
-// Entrada do texto
-typedef FILE * file_t;
 
 // Propriedades do lexema
 id_t scanner_id;
@@ -151,7 +153,7 @@ value_t scanner_value;
 
 // Tratamento de erros na análise léxica
 boolean_t scanner_error;
-unsigned long scanner_error_position;
+fpos_t scanner_error_position;
 
 // O ponteiro para o arquivo com o código-fonte e o caracter atual
 file_t scanner_file;
@@ -181,42 +183,193 @@ keyword_t scanner_keywords[] = {
 	{ .id = "div", .symbol = symbol_div },
 	{ .id = "module", .symbol = symbol_module }
 };
-
+const unsigned long scanner_keywords_count = sizeof(scanner_keywords)	/ sizeof(keyword_t);
 
 //
 // Analisador léxico
 //
 
+// Esta função é responsável por verificar se o identificar “id” é uma palavra reservada ou não
+// O símbolo equivalente à palavra reservada é armazenada por referência no parâmetro “symbol”
 boolean_t is_keyword(id_t id, symbol_t *symbol) {
-	if (strcasecmp("do", id) == 0) {
-		*symbol = symbol_do;
+	index_t index = 0;
+	while (index < scanner_keywords_count && strcasecmp(scanner_keywords[index].id, id) != 0)
+		index++;
+	if (index < scanner_keywords_count) {
+		if (symbol)
+			*symbol = scanner_keywords[index].symbol;
 		return true;
 	}
+	if (symbol)
+		*symbol = symbol_null;
 	return false;
 }
 
-void scanner_mark(const char *message) {
+// A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
+boolean_t scanner_step() {
+	if (fread(&scanner_char, sizeof(char), 1, scanner_file) == sizeof(char))
+		return true;
+	return false;
+}
 
+// Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
+void scanner_mark(const string_t message) {
+	fpos_t position;
+	fgetpos(scanner_file, &position);
+	// Como a posição do último erro encontrado ficou para trás, este erro é novo
+	if (position > scanner_error_position)
+		printf("Erro %llu: %s\n", position, message);
+	scanner_error_position = position;
+	scanner_error = true;
+}
+
+//
+// ATENÇÃO: todas as funções do analisador léxico devem garantir que “scanner_char” termine com o caractere subsequente
+// ao lexema reconhecido. Por exemplo, ao analisar “var x: integer”, a função “id“ será a primeira a ser invocada para
+// reconhecer “var”. Ao terminar, “scanner_char” deve conter o espaço em branco que o segue
+//
+// As funções “id”, “integer” e “number” fazem parte da EBNF e deveriam ser consideradas parte do analisador sintático.
+// No entanto, pela forma com que o compilador está definido, o reconhecimento de lexemas também é estipulado pela EBNF
+// fazendo com que a análise léxica seja realizada por um “mini descendente recursivo” ao invés de um autômato finito
+//
+
+void id(symbol_t *symbol) {
+	index_t index = 0;
+	while (index < id_length && isalnum(scanner_char)) {
+		scanner_id[index++] = scanner_char;
+		if (!scanner_step())
+			break;
+	}
+	// O tamanho máximo para um identificador é especificado por “id_length” e a variável “scanner_id” possui tamanho
+	// “id_length + 1” e por isso o caractere terminador pode ser incluído mesmo que o limite seja alcançado
+	scanner_id[index] = '\0';
+	if (!is_keyword(scanner_id, symbol) && symbol)
+		*symbol = symbol_id;
+}
+
+// FAZER: Adicionar verificação se o número é muito longo
+void integer(symbol_t *symbol) {
+	scanner_value = 0;
+	while (isdigit(scanner_char)) {
+		// Efetua o cálculo do valor, dígito-a-dígito, com base nos caracteres lidos
+		scanner_value = 10 * scanner_value + (scanner_char - '0');
+		if (!scanner_step())
+			break;
+	}
+	if (symbol)
+		*symbol = symbol_number;
+}
+
+// Por definição, somente números positivos inteiros são reconhecidos
+void number(symbol_t *symbol) {
+	integer(symbol);
+}
+
+// Ao entrar nesta função, o analisador léxico já encontrou os caracteres "(*" que iniciam o comentário e “scanner_char”
+// possui o asterisco como valor
+void comment(symbol_t *symbol) {
+	char last_char = scanner_char;
+	while (scanner_step()) {
+		// Comentários aninhados
+		if (scanner_char == '*' && last_char == '(')
+			comment(symbol);
+		// Fim do comentário
+		if (scanner_char == ')' && last_char == '*') {
+			scanner_step();
+			return;
+		}
+		last_char = scanner_char;
+	}
+	scanner_mark("Comentário sem fim. Blá-blá-blá...");
+	*symbol = symbol_eof;
 }
 
 void scanner_get(symbol_t *symbol) {
-
+	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
+	while (isspace(scanner_char))
+		scanner_step();
+	if (feof(scanner_file)) {
+		*symbol = symbol_eof;
+		return;
+	}
+	// Os casos de um identificador ou um número são considerados separadamente para que o código no “switch” não precise
+	// incluir uma chamada a “scanner_step” em cada “case”
+	if (isalpha(scanner_char)) {
+		id(symbol);
+		return;
+	} else if (isdigit(scanner_char)) {
+		number(symbol);
+		return;
+	}
+	switch (scanner_char) {
+		case '&': *symbol = symbol_and;						break;
+		case '*': *symbol = symbol_times;					break;
+		case '+': *symbol = symbol_plus;					break;
+		case '-': *symbol = symbol_minus;					break;
+		case '=': *symbol = symbol_equal;					break;
+		case '#': *symbol = symbol_not_equal;			break;
+		case '<': *symbol = symbol_less;					break;
+		case '>': *symbol = symbol_greater;				break;
+		case ';': *symbol = symbol_semicolon;			break;
+		case ',':	*symbol = symbol_comma;					break;
+		case ':': *symbol = symbol_colon;					break;
+		case '.': *symbol = symbol_period;				break;
+		case '(': *symbol = symbol_open_paren;		break;
+		case ')': *symbol = symbol_close_paren;		break;
+		case '[': *symbol = symbol_open_bracket;	break;
+		case ']': *symbol = symbol_close_bracket;	break;
+		case '~': *symbol = symbol_not;						break;
+		default:	*symbol = symbol_null;					break;
+	}
+	scanner_step();
+	// Os casos abaixo representam os lexemas com mais de um caracter (como “>=”, “:=” etc.)
+	if (*symbol == symbol_less && scanner_char == '=') {
+		scanner_step();
+		*symbol = symbol_less_equal;
+	} else if (*symbol == symbol_greater && scanner_char == '=') {
+		scanner_step();
+		*symbol = symbol_greater_equal;
+	} else if (*symbol == symbol_colon && scanner_char == '=') {
+		scanner_step();
+		*symbol = symbol_becomes;
+	} else if (*symbol == symbol_open_paren	&& scanner_char == '*') {
+		scanner_step();
+		// Ignora os caracteres entre “(*” e “*)” como sendo comentários e entra novamente na função para buscar o próximo
+		// lexema válido
+		comment(symbol);
+		scanner_get(symbol);
+	}
 }
 
-void scanner_initialize(file_t file, unsigned long position) {
-
+void scanner_initialize(file_t file, fpos_t position) {
+	scanner_file = file;
+	scanner_error = false;
+	scanner_error_position = position;
+	scanner_step();
 }
 
 //
 // Ponto de entrada do programa
 //
 
-int main(int argc, const char *argv[]) {
-	file_t source_code = fopen("/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Test.oberon", "r");
-	if (!source_code) {
-		printf("Arquivo não encontrado.");
+int main(int argc, const string_t argv[]) {
+	file_t source_code_file = fopen("/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Test.oberon", "r");
+	if (!source_code_file) {
+		printf("Arquivo não encontrado.\n");
 		return 0;
 	}
-	fclose(source_code);
+	scanner_initialize(source_code_file, 0);
+	symbol_t symbol = symbol_null;
+	while (symbol != symbol_eof) {
+		scanner_get(&symbol);
+		if (symbol == symbol_id)
+			printf("id: %s, ", scanner_id);
+		else if (symbol == symbol_number)
+			printf("number: %ld, ", scanner_value);
+		else
+			printf("%d, ", symbol);
+	}
+	printf("eof\n");
+	fclose(source_code_file);
 	return 0;
 }
