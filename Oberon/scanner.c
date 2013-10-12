@@ -6,10 +6,20 @@
 //  Copyright (c) 2013 Alvaro Costa Neto. All rights reserved.
 //
 
+//
+//	Vocabulário:
+//
+//	- * div mod & + - or
+//	- = # < <= > >= . , : ) ]
+//	- of then do until ( [ ~ := ;
+//	- end else elsif if while repeat
+//	- array record const type var procedure begin module
+//
+
 #include "scanner.h"
 
 //
-// Constantes e definições gerais
+// Constantes, variáveis e definições gerais
 //
 
 // Propriedades do lexema

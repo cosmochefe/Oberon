@@ -31,10 +31,10 @@
 		C6603D851809D14200002BA9 /* scanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scanner.h; sourceTree = "<group>"; };
 		C6603D871809D1C200002BA9 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		C6603D881809F7E600002BA9 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
-		C6603D891809F7F600002BA9 /* parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = parser.c; sourceTree = "<group>"; };
+		C6603D891809F7F600002BA9 /* parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; lineEnding = 0; path = parser.c; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
 		C6D59E8A1808B6B9004BF291 /* Oberon */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Oberon; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6D59E8D1808B6B9004BF291 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		C6D59E8F1808B6B9004BF291 /* Oberon.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Oberon.1; sourceTree = "<group>"; };
+		C6D59E8F1808B6B9004BF291 /* Oberon.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; lineEnding = 0; path = Oberon.1; sourceTree = "<group>"; };
 		C6D59E961808B90B004BF291 /* Test.oberon */ = {isa = PBXFileReference; fileEncoding = 5; lastKnownFileType = text; path = Test.oberon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 

@@ -16,4 +16,11 @@
 #include "types.h"
 #include "scanner.h"
 
+//
+// Pré-definições
+//
+
+boolean_t parser_initialize(file_t file);
+boolean_t parser_run();
+
 #endif
