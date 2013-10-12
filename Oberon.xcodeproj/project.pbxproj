@@ -28,7 +28,7 @@
 		C6D59E8A1808B6B9004BF291 /* Oberon */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Oberon; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6D59E8D1808B6B9004BF291 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		C6D59E8F1808B6B9004BF291 /* Oberon.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Oberon.1; sourceTree = "<group>"; };
-		C6D59E961808B90B004BF291 /* Test.oberon */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Test.oberon; sourceTree = "<group>"; };
+		C6D59E961808B90B004BF291 /* Test.oberon */ = {isa = PBXFileReference; fileEncoding = 5; lastKnownFileType = text; path = Test.oberon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,6 +227,7 @@
 				C6D59E951808B6B9004BF291 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
