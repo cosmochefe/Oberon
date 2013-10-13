@@ -69,19 +69,32 @@ typedef char id_t[SCANNER_MAX_ID_LENGTH + 1];
 
 typedef long int value_t;
 
-typedef struct _keyword {
+typedef struct _lexem {
 	id_t id;
 	symbol_t symbol;
-} keyword_t;
+} lexem_t;
 
 typedef fpos_t position_t;
 
-//extern keyword_t scanner_keywords[];
-//extern const index_t scanner_keywords_count;
+extern lexem_t scanner_keywords[];
+extern const index_t scanner_keywords_count;
+
+extern lexem_t scanner_operators[];
+extern const index_t scanner_operators_count;
+
+extern lexem_t scanner_punctuation[];
+extern const index_t scanner_punctuation_count;
+
+// FAZER: Trabalhar com cadeias de tamanho variável
+typedef struct _token {
+	id_t id;
+	symbol_t symbol;
+	value_t value;
+	position_t position;
+} token_t;
 
 // Propriedades do lexema
-extern id_t scanner_id;
-extern value_t scanner_value;
+extern token_t scanner_token;
 
 //
 // Pré-definições
@@ -92,8 +105,10 @@ boolean_t is_digit(char c);
 boolean_t is_blank(char c);
 boolean_t is_keyword(id_t id, symbol_t *symbol);
 
+string_t id_for_symbol(symbol_t symbol);
+
 void scanner_mark(const string_t message);
 void scanner_initialize(file_t file, position_t position);
-void scanner_get(symbol_t *symbol);
+void scanner_get();
 
 #endif

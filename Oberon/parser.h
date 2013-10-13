@@ -20,7 +20,7 @@
 // Pré-definições
 //
 
-boolean_t parser_initialize(file_t file);
+boolean_t parser_initialize(file_t input_file, file_t output_file);
 boolean_t parser_run();
 
 #endif
