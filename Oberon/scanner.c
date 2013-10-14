@@ -128,6 +128,112 @@ boolean_t is_keyword(id_t id, symbol_t *symbol) {
 	return false;
 }
 
+boolean_t is_first(string_t non_terminal, symbol_t symbol)
+{
+	if (strcmp(non_terminal, "selector") == 0)
+		return symbol == symbol_period ||
+					 symbol == symbol_open_bracket ||
+					 symbol == symbol_null;
+	else if (strcmp(non_terminal, "factor") == 0)
+		return symbol == symbol_open_paren ||
+					 symbol == symbol_not ||
+					 symbol == symbol_number ||
+					 symbol == symbol_id;
+	else if (strcmp(non_terminal, "term") == 0)
+		return symbol == symbol_open_paren ||
+					 symbol == symbol_not ||
+					 symbol == symbol_number ||
+					 symbol == symbol_id;
+	else if (strcmp(non_terminal, "simple_expr") == 0)
+		return symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_open_paren ||
+					 symbol == symbol_not ||
+					 symbol == symbol_number ||
+					 symbol == symbol_id;
+	else if (strcmp(non_terminal, "expr") == 0)
+		return symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_open_paren ||
+					 symbol == symbol_not ||
+					 symbol == symbol_number ||
+					 symbol == symbol_id;
+	else if (strcmp(non_terminal, "assignment") == 0)
+		return symbol == symbol_becomes;
+	else if (strcmp(non_terminal, "actual_params") == 0)
+		return symbol == symbol_open_paren;
+	else if (strcmp(non_terminal, "proc_call") == 0)
+		return symbol == symbol_open_paren ||
+					 symbol == symbol_null;
+	else if (strcmp(non_terminal, "if_stmt") == 0)
+		return symbol == symbol_if;
+	else if (strcmp(non_terminal, "while_stmt") == 0)
+		return symbol == symbol_while;
+	else if (strcmp(non_terminal, "repeat_stmt") == 0)
+		return symbol == symbol_repeat;
+	else if (strcmp(non_terminal, "stmt") == 0)
+		return symbol == symbol_id ||
+					 symbol == symbol_if ||
+					 symbol == symbol_while ||
+					 symbol == symbol_repeat ||
+					 symbol == symbol_null;
+	else if (strcmp(non_terminal, "stmt_sequence") == 0)
+		return symbol == symbol_id ||
+					 symbol == symbol_if ||
+					 symbol == symbol_while ||
+					 symbol == symbol_repeat ||
+					 symbol == symbol_null;
+	else if (strcmp(non_terminal, "id_list") == 0)
+		return symbol == symbol_id;
+	else if (strcmp(non_terminal, "array_type") == 0)
+		return symbol == symbol_array;
+	else if (strcmp(non_terminal, "field_list") == 0)
+		return symbol == symbol_id ||
+					 symbol == symbol_null;
+	else if (strcmp(non_terminal, "record_type") == 0)
+		return symbol == symbol_record;
+	else if (strcmp(non_terminal, "type") == 0)
+		return symbol == symbol_id ||
+					 symbol == symbol_array ||
+					 symbol == symbol_record;
+	else if (strcmp(non_terminal, "formal_params_section") == 0)
+		return symbol == symbol_id ||
+					 symbol == symbol_var;
+	else if (strcmp(non_terminal, "formal_params") == 0)
+		return symbol == symbol_open_paren;
+	else if (strcmp(non_terminal, "proc_head") == 0)
+		return symbol == symbol_proc;
+	else if (strcmp(non_terminal, "proc_body") == 0)
+		return symbol == symbol_end ||
+					 symbol == symbol_const ||
+					 symbol == symbol_type ||
+					 symbol == symbol_var ||
+					 symbol == symbol_proc ||
+					 symbol == symbol_begin;
+	else if (strcmp(non_terminal, "proc_decl") == 0)
+		return symbol == symbol_proc;
+	else if (strcmp(non_terminal, "const_decl") == 0)
+		return symbol == symbol_const;
+	else if (strcmp(non_terminal, "type_decl") == 0)
+		return symbol == symbol_type;
+	else if (strcmp(non_terminal, "var_decl") == 0)
+		return symbol == symbol_var;
+	else if (strcmp(non_terminal, "declarations") == 0)
+		return symbol == symbol_const ||
+					 symbol == symbol_type ||
+					 symbol == symbol_var ||
+					 symbol == symbol_proc ||
+					 symbol == symbol_begin;
+	else if (strcmp(non_terminal, "module") == 0)
+		return symbol == symbol_module;
+	return false;
+}
+
+boolean_t is_follow(string_t non_terminal, symbol_t symbol)
+{
+	return false;
+}
+
 string_t id_for_symbol(symbol_t symbol) {
 	for (index_t index = 0; index < scanner_keywords_count; index++)
 		if (scanner_keywords[index].symbol == symbol)

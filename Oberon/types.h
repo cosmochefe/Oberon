@@ -11,9 +11,12 @@
 
 #include <stdio.h>
 
-typedef enum _boolean { false = 0, true = 1 } boolean_t;
+typedef int boolean_t;
 typedef unsigned int index_t;
 typedef FILE * file_t;
 typedef char * string_t;
+
+extern const boolean_t true;
+extern const boolean_t false;
 
 #endif

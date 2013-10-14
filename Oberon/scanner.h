@@ -103,7 +103,11 @@ extern token_t scanner_token;
 boolean_t is_letter(char c);
 boolean_t is_digit(char c);
 boolean_t is_blank(char c);
+
 boolean_t is_keyword(id_t id, symbol_t *symbol);
+
+boolean_t is_first(string_t non_terminal, symbol_t symbol);
+boolean_t is_follow(string_t non_terminal, symbol_t symbol);
 
 string_t id_for_symbol(symbol_t symbol);
 

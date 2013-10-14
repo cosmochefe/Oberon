@@ -108,7 +108,7 @@
 symbol_t parser_symbol;
 
 // Registro de ocorrências
-boolean_t parser_should_log = true;
+boolean_t parser_should_log;
 
 // Arquivos de entrada e saída
 file_t parser_input_file, parser_output_file;
@@ -232,114 +232,229 @@ boolean_t expr() {
 	return result;
 }
 
-// assignment = ident selector ":=" expr
+// assignment = ":=" expr
 boolean_t assignment() {
 	boolean_t result;
+	result = parser_assert(symbol_becomes);
+	result = expr();
 	return result;
 }
 
 // actual_params = "(" [expr {"," expr}] ")"
 boolean_t actual_params() {
 	boolean_t result;
+	result = parser_assert(symbol_open_paren);
+	if (is_first("expr", scanner_token.symbol)) {
+		result = expr();
+		while (scanner_token.symbol == symbol_comma) {
+			result = parser_assert(symbol_comma);
+			result = expr();
+		}
+	}
+	result = parser_assert(symbol_close_paren);
 	return result;
 }
 
-// proc_call = ident selector [actual_params]
+// proc_call = [actual_params]
 boolean_t proc_call() {
-	boolean_t result;
+	boolean_t result = true;
+	if (is_first("actual_params", scanner_token.symbol))
+		result = actual_params();
 	return result;
 }
+
+boolean_t stmt_sequence();
 
 // if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 boolean_t if_stmt() {
 	boolean_t result;
+	result = parser_assert(symbol_if);
+	result = expr();
+	result = parser_assert(symbol_then);
+	result = stmt_sequence();
+	while (scanner_token.symbol == symbol_elsif) {
+		result = parser_assert(symbol_elsif);
+		result = expr();
+		result = parser_assert(symbol_then);
+		result = stmt_sequence();
+	}
+	if (scanner_token.symbol == symbol_else) {
+		result = parser_assert(symbol_else);
+		result = stmt_sequence();
+	}
+	result = parser_assert(symbol_end);
 	return result;
 }
 
 // while_stmt = "while" expr "do" stmt_sequence "end"
 boolean_t while_stmt() {
 	boolean_t result;
+	result = parser_assert(symbol_while);
+	result = expr();
+	result = parser_assert(symbol_do);
+	result = stmt_sequence();
+	result = parser_assert(symbol_end);
 	return result;
 }
 
 // repeat_stmt = "repeat" stmt_sequence "until" expr
 boolean_t repeat_stmt() {
 	boolean_t result;
+	result = parser_assert(symbol_repeat);
+	result = stmt_sequence();
+	result = parser_assert(symbol_until);
+	result = expr();
 	return result;
 }
 
-// stmt = [assignment | proc_call | if_stmt | while_stmt | repeat_stmt]
+// stmt = id (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 boolean_t stmt() {
-	boolean_t result;
+	boolean_t result = true;
+	if (scanner_token.symbol == symbol_id) {
+		result = parser_assert(symbol_id);
+		result = selector();
+		if (is_first("assignment", scanner_token.symbol))
+			result = assignment();
+		else
+			result = proc_call();
+	}	else if (is_first("if_stmt", scanner_token.symbol))
+		result = if_stmt();
+	else if (is_first("while_stmt", scanner_token.symbol))
+		result = while_stmt();
+	else if (is_first("repeat_stmt", scanner_token.symbol))
+		result = repeat_stmt();
 	return result;
 }
 
 // stmt_sequence = stmt {";" stmt}
 boolean_t stmt_sequence() {
 	boolean_t result;
+	result = stmt();
+	while (scanner_token.symbol == symbol_semicolon) {
+		result = parser_assert(symbol_semicolon);
+		result = stmt();
+	}
 	return result;
 }
 
 // id_list = id {"," id}
 boolean_t id_list() {
 	boolean_t result;
+	result = parser_assert(symbol_id);
+	while (scanner_token.symbol == symbol_comma) {
+		result = parser_assert(symbol_comma);
+		result = parser_assert(symbol_id);
+	}	
 	return result;
 }
+
+boolean_t type();
 
 // array_type = "array" expr "of" type
 boolean_t array_type() {
 	boolean_t result;
+	result = parser_assert(symbol_array);
+	result = expr();
+	result = parser_assert(symbol_of);
+	result = type();
 	return result;
 }
 
 // field_list = [id_list ":" type]
 boolean_t field_list() {
-	boolean_t result;
+	boolean_t result = true;
+	if (is_first("id_list", scanner_token.symbol)) {
+		result = id_list();
+		result = parser_assert(symbol_colon);
+		result = type();
+	}
 	return result;
 }
 
 // record_type = "record" field_list {";" field_list} "end"
 boolean_t record_type() {
 	boolean_t result;
+	result = parser_assert(symbol_record);
+	result = field_list();
+	while (scanner_token.symbol == symbol_semicolon) {
+		result = parser_assert(symbol_semicolon);
+		result = field_list();
+	}
+	result = parser_assert(symbol_end);
 	return result;
 }
 
 // type = id | array_type | record_type
 boolean_t type() {
-	boolean_t result;
+	boolean_t result = false;
+	if (scanner_token.symbol == symbol_id)
+		result = parser_assert(symbol_id);
+	else if (is_first("array_type", scanner_token.symbol))
+		result = array_type();
+	else if (is_first("array_type", scanner_token.symbol))
+		result = array_type();
+	else
+		scanner_mark("Faltando tipo.");
 	return result;
 }
 
 // formal_params_section = ["var"] id_list ":" type
 boolean_t formal_params_section() {
 	boolean_t result;
+	if (scanner_token.symbol == symbol_var)
+		result = parser_assert(symbol_var);
+	result = id_list();
+	result = parser_assert(symbol_colon);
+	result = type();
 	return result;
 }
 
 // formal_params = "(" [formal_params_section {";" formal_params_section}] ")"
 boolean_t formal_params() {
 	boolean_t result;
+	result = parser_assert(symbol_open_paren);
+	if (is_first("formal_params_section", scanner_token.symbol)) {
+		result = formal_params_section();
+		while (scanner_token.symbol == symbol_semicolon) {
+			result = parser_assert(symbol_semicolon);
+			result = formal_params_section();
+		}
+	}
+	result = parser_assert(symbol_close_paren);
 	return result;
 }
 
 // proc_head = "procedure" id [formal_params]
 boolean_t proc_head() {
 	boolean_t result;
+	result = parser_assert(symbol_proc);
+	result = parser_assert(symbol_id);
+	if (is_first("formal_params", scanner_token.symbol))
+		result = formal_params();
 	return result;
 }
+
+boolean_t declarations();
 
 // proc_body = declarations ["begin" stmt_sequence] "end" id
 boolean_t proc_body() {
 	boolean_t result;
+	result = declarations();
+	if (scanner_token.symbol == symbol_begin) {
+		result = parser_assert(symbol_begin);
+		result = stmt_sequence();
+	}
+	result = parser_assert(symbol_end);
+	result = parser_assert(symbol_id);
 	return result;
 }
 
 // proc_decl = proc_head ";" proc_body
 boolean_t proc_decl() {
 	boolean_t result;
-//	result = proc_head();
-//	result = parser_assert(symbol_semicolon);
-//	result = proc_body();
+	result = proc_head();
+	result = parser_assert(symbol_semicolon);
+	result = proc_body();
 	return result;
 }
 
@@ -375,6 +490,12 @@ boolean_t const_decl() {
 boolean_t type_decl() {
 	boolean_t result;
 	result = parser_assert(symbol_type);
+	while (scanner_token.symbol == symbol_id) {
+		result = parser_assert(symbol_id);
+		result = parser_assert(symbol_equal);
+		result = type();
+		result = parser_assert(symbol_semicolon);
+	}
 	return result;
 }
 
@@ -382,22 +503,28 @@ boolean_t type_decl() {
 boolean_t var_decl() {
 	boolean_t result;
 	result = parser_assert(symbol_var);
+	while (is_first("id_list", scanner_token.symbol)) {
+		result = id_list();
+		result = parser_assert(symbol_colon);
+		result = type();
+		result = parser_assert(symbol_semicolon);
+	}
 	return result;
 }
 
 // declarations = [const_decl] [type_decl] [var_decl] {proc_decl ";"}
 boolean_t declarations() {
 	boolean_t result = true;
-	if (scanner_token.symbol == symbol_const)
+	if (is_first("const_decl", scanner_token.symbol))
 			result = const_decl();
-//	if (scanner_token.symbol == symbol_type)
-//			result = type_decl();
-//	if (scanner_token.symbol == symbol_var)
-//			result = var_decl();
-//	while (scanner_token.symbol == symbol_proc) {
-//		result = proc_decl();
-//		result = parser_assert(symbol_semicolon);
-//	}
+	if (is_first("type_decl", scanner_token.symbol))
+			result = type_decl();
+	if (is_first("var_decl", scanner_token.symbol))
+			result = var_decl();
+	while (is_first("proc_decl", scanner_token.symbol)) {
+		result = proc_decl();
+		result = parser_assert(symbol_semicolon);
+	}
 	return result;
 }
 
@@ -410,7 +537,7 @@ boolean_t module() {
 	result = declarations();
 	if (scanner_token.symbol == symbol_begin) {
 		result = parser_assert(symbol_begin);
-//		result = stmt_sequence();
+		result = stmt_sequence();
 	}
 	result = parser_assert(symbol_end);
 	result = parser_assert(symbol_id);
@@ -422,6 +549,7 @@ boolean_t module() {
 boolean_t parser_initialize(file_t input_file, file_t output_file) {
 	parser_input_file = input_file;
 	parser_output_file = output_file;
+	parser_should_log = true;
 	scanner_initialize(parser_input_file, 0);
 	scanner_get();
 	if (scanner_token.symbol == symbol_eof)

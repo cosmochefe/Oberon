@@ -21,6 +21,9 @@
 const string_t input_path  = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Input.txt";
 const string_t output_path = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Output.asm";
 
+const boolean_t true = 1;
+const boolean_t false = 0;
+
 //
 // Ponto de entrada do programa
 //
