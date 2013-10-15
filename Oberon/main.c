@@ -12,6 +12,7 @@
 #include <strings.h>
 
 #include "types.h"
+#include "errors.h"
 #include "scanner.h"
 #include "parser.h"
 

@@ -24,14 +24,17 @@
 
 // O lexema
 token_t scanner_token;
-
-// Tratamento de erros na análise léxica
-boolean_t scanner_error;
-position_t scanner_error_position;
+// A posição atual do analisador léxico
+position_t scanner_position;
 
 // O ponteiro para o arquivo com o código-fonte e o caractere atual
 file_t scanner_file;
 char scanner_char;
+char scanner_last_char;
+
+// Tratamento de erros na análise léxica
+boolean_t scanner_error;
+position_t scanner_error_position;
 
 // Vetor com todas as palavras-chave da linguagem
 lexem_t scanner_keywords[] = {
@@ -95,21 +98,19 @@ const index_t scanner_punctuation_count = sizeof(scanner_keywords) / sizeof(lexe
 
 // As funções “is_letter”, “is_digit” e “is_blank” chamam as versões internas da linguagem C. Por enquanto...
 boolean_t is_letter(char c) {
-	if (isalpha(c))
-		return true;
-	return false;
+	return isalpha(c);
 }
 
 boolean_t is_digit(char c) {
-	if (isdigit(c))
-		return true;
-	return false;
+	return isdigit(c);
 }
 
 boolean_t is_blank(char c) {
-	if (isspace(c))
-		return true;
-	return false;
+	return isspace(c);
+}
+
+boolean_t is_newline(char c, char p) {
+	return (c == '\n' && p != '\r') || c == '\r';
 }
 
 // Esta função é responsável por verificar se o identificar “id” é uma palavra reservada ou não
@@ -249,20 +250,16 @@ string_t id_for_symbol(symbol_t symbol) {
 
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
 boolean_t scanner_step() {
-	if (fread(&scanner_char, sizeof(char), 1, scanner_file) == sizeof(char))
+	scanner_last_char = scanner_char;
+	if (fread(&scanner_char, sizeof(char), 1, scanner_file) == sizeof(char)) {
+		if (is_newline(scanner_char, scanner_last_char)) {
+			scanner_position.line++;
+			scanner_position.column = 0;
+		} else scanner_position.column++;
+		scanner_position.input_position++;
 		return true;
+	}
 	return false;
-}
-
-// Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
-void scanner_mark(const string_t message) {
-	position_t position;
-	fgetpos(scanner_file, &position);
-	// Como a posição do último erro encontrado ficou para trás, este erro é novo
-	if (position > scanner_error_position)
-		printf("Erro %llu: %s\n", position, message);
-	scanner_error_position = position;
-	scanner_error = true;
 }
 
 //
@@ -277,6 +274,7 @@ void scanner_mark(const string_t message) {
 
 void id() {
 	index_t index = 0;
+	scanner_token.position = scanner_position;
 	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || is_digit(scanner_char))) {
 		scanner_token.id[index++] = scanner_char;
 		if (!scanner_step())
@@ -292,6 +290,7 @@ void id() {
 // FAZER: Adicionar verificação se o número é muito longo
 void integer() {
 	index_t index = 0;
+	scanner_token.position = scanner_position;
 	scanner_token.value = 0;
 	while (index < SCANNER_MAX_ID_LENGTH && is_digit(scanner_char)) {
 		scanner_token.id[index++] = scanner_char;
@@ -312,19 +311,20 @@ void number() {
 // Ao entrar nesta função, o analisador léxico já encontrou os caracteres "(*" que iniciam o comentário e “scanner_char”
 // possui o asterisco como valor
 void comment() {
-	char last_char = scanner_char;
+	char previous_char = scanner_char;
+	scanner_token.position = scanner_position;
 	while (scanner_step()) {
 		// Comentários aninhados
-		if (scanner_char == '*' && last_char == '(')
+		if (scanner_char == '*' && previous_char == '(')
 			comment();
 		// Fim do comentário
-		if (scanner_char == ')' && last_char == '*') {
+		if (scanner_char == ')' && previous_char == '*') {
 			scanner_step();
 			return;
 		}
-		last_char = scanner_char;
+		previous_char = scanner_char;
 	}
-	scanner_mark("Comentário sem fim. Bazinga!");
+	errors_mark(error_fatal, "Endless comment detected. Comencing “EARMUFFS” operation.");
 	scanner_token.symbol = symbol_eof;
 }
 
@@ -346,6 +346,7 @@ void scanner_get() {
 		number();
 		return;
 	}
+	scanner_token.position = scanner_position;
 	scanner_token.id[0] = scanner_char;
 	switch (scanner_token.id[0]) {
 		case '&': scanner_token.symbol = symbol_and;						break;
@@ -394,9 +395,13 @@ void scanner_get() {
 	}
 }
 
-void scanner_initialize(file_t file, position_t position) {
+void scanner_initialize(file_t file) {
 	scanner_file = file;
+	scanner_position.line = 1;
+	scanner_position.column = 0;
+	scanner_position.input_position = 0;
 	scanner_error = false;
-	scanner_error_position = position;
+	scanner_error_position = scanner_position;
+	scanner_char = '\0';
 	scanner_step();
 }

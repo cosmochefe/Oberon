@@ -123,28 +123,21 @@ void parser_next() {
 	scanner_get(&parser_symbol);
 }
 
-void parser_log(const string_t message) {
+void parser_log(const string_t message, const position_t position) {
 	if (parser_should_log)
-		printf("Log: %s\n", message);
+		printf("Log (%d, %d): %s\n", position.line, position.column, message);
 }
 
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
 // FAZER: Implementar algo mais robusto!
 boolean_t parser_assert(symbol_t symbol) {
-	char message[256];
 	if (scanner_token.symbol == symbol || symbol == symbol_null) {
+		char message[256];
 		sprintf(message, "\"%s\" encontrado.", scanner_token.id);
-		parser_log(message);
+		parser_log(message, scanner_token.position);
 		parser_next();
 		return true;
 	}
-	if (symbol == symbol_id)
-		sprintf(message, "Faltando um identificador.");
-	else if (symbol == symbol_number)
-		sprintf(message, "Faltando um número.");
-	else
-		sprintf(message, "Faltando \"%s\".", id_for_symbol(symbol));
-	scanner_mark(message);
 	return false;
 }
 
@@ -160,7 +153,10 @@ boolean_t selector() {
 		} else {
 			result = parser_assert(symbol_open_bracket);
 			result = expr();
-			result = parser_assert(symbol_close_bracket);
+			if (!parser_assert(symbol_close_bracket)) {
+				errors_mark(error_scanner, "Faltando símblo \"]\".");
+				parser_next();
+			}
 		}
 	}
 	return result;
@@ -187,7 +183,7 @@ boolean_t factor() {
 			result = factor();
 			break;
 		default:
-			scanner_mark("Faltando fator.");
+			errors_mark(error_parser, "Faltando fator.");
 			result = false;
 			break;
 	}
@@ -307,7 +303,7 @@ boolean_t repeat_stmt() {
 	return result;
 }
 
-// stmt = id (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
+// stmt = [id (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 boolean_t stmt() {
 	boolean_t result = true;
 	if (scanner_token.symbol == symbol_id) {
@@ -394,7 +390,7 @@ boolean_t type() {
 	else if (is_first("array_type", scanner_token.symbol))
 		result = array_type();
 	else
-		scanner_mark("Faltando tipo.");
+		errors_mark(error_parser, "Faltando tipo.");
 	return result;
 }
 
@@ -550,7 +546,7 @@ boolean_t parser_initialize(file_t input_file, file_t output_file) {
 	parser_input_file = input_file;
 	parser_output_file = output_file;
 	parser_should_log = true;
-	scanner_initialize(parser_input_file, 0);
+	scanner_initialize(parser_input_file);
 	scanner_get();
 	if (scanner_token.symbol == symbol_eof)
 		return false;

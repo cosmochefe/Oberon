@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 #include "types.h"
+#include "errors.h"
 
 #define SCANNER_MAX_ID_LENGTH 16
 
@@ -69,12 +70,16 @@ typedef char id_t[SCANNER_MAX_ID_LENGTH + 1];
 
 typedef long int value_t;
 
+typedef struct _position {
+	unsigned int line;
+	unsigned int column;
+	fpos_t input_position;
+} position_t;
+
 typedef struct _lexem {
 	id_t id;
 	symbol_t symbol;
 } lexem_t;
-
-typedef fpos_t position_t;
 
 extern lexem_t scanner_keywords[];
 extern const index_t scanner_keywords_count;
@@ -95,6 +100,8 @@ typedef struct _token {
 
 // Propriedades do lexema
 extern token_t scanner_token;
+// Posição atual de analisador léxico
+extern position_t scanner_position;
 
 //
 // Pré-definições
@@ -111,8 +118,7 @@ boolean_t is_follow(string_t non_terminal, symbol_t symbol);
 
 string_t id_for_symbol(symbol_t symbol);
 
-void scanner_mark(const string_t message);
-void scanner_initialize(file_t file, position_t position);
+void scanner_initialize(file_t file);
 void scanner_get();
 
 #endif

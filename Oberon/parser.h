@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 #include "types.h"
+#include "errors.h"
 #include "scanner.h"
 
 //
