@@ -19,4 +19,7 @@ typedef char * string_t;
 extern const boolean_t true;
 extern const boolean_t false;
 
+extern file_t input_file;
+extern file_t output_file;
+
 #endif

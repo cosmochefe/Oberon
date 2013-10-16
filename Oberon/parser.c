@@ -103,9 +103,6 @@
 // Registro de ocorrências
 boolean_t parser_should_log;
 
-// Arquivos de entrada e saída
-file_t parser_input_file, parser_output_file;
-
 //
 // Analisador sintático
 //
@@ -116,22 +113,12 @@ void parser_next() {
 	} while (scanner_token.symbol == symbol_null);
 }
 
-void parser_log(const position_t position, const string_t message, ...) {
-	if (parser_should_log) {
-		printf("Log at (%d, %d): ", position.line, position.column);
-		va_list args;
-		va_start(args, message);
-		vprintf(message, args);
-		va_end(args);
-		printf("\n");
-	}
-}
-
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
 // FAZER: Implementar algo mais robusto!
 boolean_t parser_assert(symbol_t symbol) {
 	if (scanner_token.symbol == symbol || symbol == symbol_null) {
-		parser_log(scanner_token.position, "\"%s\" found.", scanner_token.id);
+		if (parser_should_log)
+			errors_mark(error_log, "\"%s\" found.", scanner_token.id);
 		parser_next();
 		return true;
 	}
@@ -539,16 +526,11 @@ boolean_t module() {
 }
 
 // Retorna se a inicialização do analisador léxico obteve sucesso ou não e se o arquivo estava em branco
-boolean_t parser_initialize(file_t input_file, file_t output_file) {
-	parser_input_file = input_file;
-	parser_output_file = output_file;
+boolean_t parser_initialize() {
 	parser_should_log = false;
-	errors_just_quit = false;
-	scanner_initialize(parser_input_file);
+	scanner_initialize();
 	scanner_get();
-	if (scanner_token.symbol == symbol_eof)
-		return false;
-	return true;
+	return scanner_token.symbol != symbol_eof;
 }
 
 boolean_t parser_run() {

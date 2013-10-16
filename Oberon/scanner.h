@@ -66,7 +66,7 @@ typedef enum _symbol {
 	symbol_eof = 64
 } symbol_t;
 
-typedef char id_t[SCANNER_MAX_ID_LENGTH + 1];
+typedef char identifier_t[SCANNER_MAX_ID_LENGTH + 1];
 
 typedef long int value_t;
 
@@ -77,7 +77,7 @@ typedef struct _position {
 } position_t;
 
 typedef struct _lexem {
-	id_t id;
+	identifier_t id;
 	symbol_t symbol;
 } lexem_t;
 
@@ -91,7 +91,7 @@ extern lexem_t scanner_punctuation[];
 extern const index_t scanner_punctuation_count;
 
 typedef struct _token {
-	id_t id;
+	identifier_t id;
 	symbol_t symbol;
 	value_t value;
 	position_t position;
@@ -108,14 +108,14 @@ boolean_t is_letter(char c);
 boolean_t is_digit(char c);
 boolean_t is_blank(char c);
 
-boolean_t is_keyword(id_t id, symbol_t *symbol);
+boolean_t is_keyword(identifier_t id, symbol_t *symbol);
 
 boolean_t is_first(string_t non_terminal, symbol_t symbol);
 boolean_t is_follow(string_t non_terminal, symbol_t symbol);
 
 string_t id_for_symbol(symbol_t symbol);
 
-void scanner_initialize(file_t file);
+void scanner_initialize();
 void scanner_get();
 
 #endif

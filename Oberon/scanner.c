@@ -18,19 +18,13 @@
 
 #include "scanner.h"
 
-// O lexema
+// O lexema lido
 token_t scanner_token;
 // A posição atual do analisador léxico
 position_t scanner_position;
 
-// O ponteiro para o arquivo com o código-fonte e o caractere atual
-file_t scanner_file;
 char scanner_char;
 char scanner_last_char;
-
-// Tratamento de erros na análise léxica
-boolean_t scanner_error;
-position_t scanner_error_position;
 
 // Vetor com todas as palavras-chave da linguagem
 lexem_t scanner_keywords[] = {
@@ -111,7 +105,7 @@ boolean_t is_newline(char c, char p) {
 
 // Esta função é responsável por verificar se o identificar “id” é uma palavra reservada ou não
 // O símbolo equivalente à palavra reservada é armazenado via referência no parâmetro “symbol”
-boolean_t is_keyword(id_t id, symbol_t *symbol) {
+boolean_t is_keyword(identifier_t id, symbol_t *symbol) {
 	index_t index = 0;
 	while (index < scanner_keywords_count && strcasecmp(scanner_keywords[index].id, id) != 0)
 		index++;
@@ -247,7 +241,7 @@ string_t id_for_symbol(symbol_t symbol) {
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
 boolean_t scanner_step() {
 	scanner_last_char = scanner_char;
-	if (fread(&scanner_char, sizeof(char), 1, scanner_file) == sizeof(char)) {
+	if (fread(&scanner_char, sizeof(char), 1, input_file) == sizeof(char)) {
 		if (is_newline(scanner_char, scanner_last_char)) {
 			scanner_position.line++;
 			scanner_position.column = 0;
@@ -288,7 +282,7 @@ void integer() {
 	index_t index = 0;
 	scanner_token.position = scanner_position;
 	scanner_token.value = 0;
-	id_t id;
+	identifier_t id;
 	while (index < SCANNER_MAX_ID_LENGTH && is_digit(scanner_char)) {
 		id[index] = scanner_char;
 		scanner_token.id[index] = scanner_char;
@@ -341,7 +335,7 @@ void scanner_get() {
 	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
 	while (is_blank(scanner_char))
 		scanner_step();
-	if (feof(scanner_file)) {
+	if (feof(input_file)) {
 		strcpy(scanner_token.id, "EOF");
 		scanner_token.symbol = symbol_eof;
 		return;
@@ -408,13 +402,10 @@ void scanner_get() {
 	}
 }
 
-void scanner_initialize(file_t file) {
-	scanner_file = file;
+void scanner_initialize() {
 	scanner_position.line = 1;
 	scanner_position.column = 0;
 	scanner_position.index = 0;
-	scanner_error = false;
-	scanner_error_position = scanner_position;
 	scanner_char = '\0';
 	scanner_step();
 }

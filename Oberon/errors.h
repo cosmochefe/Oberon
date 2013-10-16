@@ -9,6 +9,7 @@
 #ifndef Oberon_errors_h
 #define Oberon_errors_h
 
+#include <stdlib.h>
 #include <stdarg.h>
 
 #include "types.h"
@@ -17,6 +18,7 @@
 #define ERRORS_BAD_CODE_TOLERANCE 50
 
 typedef enum _error_level {
+	error_log,
 	error_info,
 	error_tip,
 	error_warning,
@@ -25,9 +27,6 @@ typedef enum _error_level {
 	error_fatal,
 	error_unknown
 } error_t;
-
-extern unsigned int errors_count;
-extern boolean_t errors_just_quit;
 
 //
 // Pré-definições

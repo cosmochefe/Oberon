@@ -10,19 +10,17 @@
 
 unsigned int errors_count = 0;
 
-// Se esta variável for verdadeira, as funções de análise e geração de código devem simplesmente sair
-boolean_t errors_just_quit;
-
 // Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
 void errors_mark(const error_t error, const string_t message, ...) {
 	if (error > error_warning)
 		errors_count++;
 	if (errors_count > ERRORS_BAD_CODE_TOLERANCE) {
 		printf("That's it. I quit!\n");
-		errors_just_quit = true;
-		return;
+		exit(EXIT_FAILURE);
 	}
 	switch (error) {
+		case error_log:
+			printf("Log at "); break;
 		case error_info:
 			printf("Info at "); break;
 		case error_tip:
