@@ -1,7 +1,7 @@
 MODULE Sample;
 
 CONST
-	i = 10;
+	i = 10x;
 
 TYPE
 	INTEGER = INT;

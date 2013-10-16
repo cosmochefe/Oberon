@@ -73,7 +73,7 @@ typedef long int value_t;
 typedef struct _position {
 	unsigned int line;
 	unsigned int column;
-	fpos_t input_position;
+	fpos_t index;
 } position_t;
 
 typedef struct _lexem {
@@ -90,7 +90,6 @@ extern const index_t scanner_operators_count;
 extern lexem_t scanner_punctuation[];
 extern const index_t scanner_punctuation_count;
 
-// FAZER: Trabalhar com cadeias de tamanho variável
 typedef struct _token {
 	id_t id;
 	symbol_t symbol;
@@ -98,9 +97,7 @@ typedef struct _token {
 	position_t position;
 } token_t;
 
-// Propriedades do lexema
 extern token_t scanner_token;
-// Posição atual de analisador léxico
 extern position_t scanner_position;
 
 //

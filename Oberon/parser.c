@@ -100,13 +100,6 @@
 
 #include "parser.h"
 
-//
-// Constantes, variáveis e definições gerais
-//
-
-// Símbolo atual
-symbol_t parser_symbol;
-
 // Registro de ocorrências
 boolean_t parser_should_log;
 
@@ -117,24 +110,28 @@ file_t parser_input_file, parser_output_file;
 // Analisador sintático
 //
 
-// FAZER: Adicionar recuperação de erros
-
 void parser_next() {
-	scanner_get(&parser_symbol);
+	do {
+		scanner_get();
+	} while (scanner_token.symbol == symbol_null);
 }
 
-void parser_log(const string_t message, const position_t position) {
-	if (parser_should_log)
-		printf("Log (%d, %d): %s\n", position.line, position.column, message);
+void parser_log(const position_t position, const string_t message, ...) {
+	if (parser_should_log) {
+		printf("Log at (%d, %d): ", position.line, position.column);
+		va_list args;
+		va_start(args, message);
+		vprintf(message, args);
+		va_end(args);
+		printf("\n");
+	}
 }
 
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
 // FAZER: Implementar algo mais robusto!
 boolean_t parser_assert(symbol_t symbol) {
 	if (scanner_token.symbol == symbol || symbol == symbol_null) {
-		char message[256];
-		sprintf(message, "\"%s\" encontrado.", scanner_token.id);
-		parser_log(message, scanner_token.position);
+		parser_log(scanner_token.position, "\"%s\" found.", scanner_token.id);
 		parser_next();
 		return true;
 	}
@@ -146,7 +143,7 @@ boolean_t expr();
 // selector = {"." id | "[" expr "]"}
 boolean_t selector() {
 	boolean_t result = true;
-	while (scanner_token.symbol == symbol_period || scanner_token.symbol == symbol_open_bracket) {
+	while (is_first("selector", scanner_token.symbol)) {
 		if (scanner_token.symbol == symbol_period) {
 			result = parser_assert(symbol_period);
 			result = parser_assert(symbol_id);
@@ -154,7 +151,7 @@ boolean_t selector() {
 			result = parser_assert(symbol_open_bracket);
 			result = expr();
 			if (!parser_assert(symbol_close_bracket)) {
-				errors_mark(error_scanner, "Faltando símblo \"]\".");
+				errors_mark(error_parser, "Missing \"]\".");
 				parser_next();
 			}
 		}
@@ -183,7 +180,7 @@ boolean_t factor() {
 			result = factor();
 			break;
 		default:
-			errors_mark(error_parser, "Faltando fator.");
+			errors_mark(error_parser, "Missing factor.");
 			result = false;
 			break;
 	}
@@ -545,7 +542,8 @@ boolean_t module() {
 boolean_t parser_initialize(file_t input_file, file_t output_file) {
 	parser_input_file = input_file;
 	parser_output_file = output_file;
-	parser_should_log = true;
+	parser_should_log = false;
+	errors_just_quit = false;
 	scanner_initialize(parser_input_file);
 	scanner_get();
 	if (scanner_token.symbol == symbol_eof)

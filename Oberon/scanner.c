@@ -18,10 +18,6 @@
 
 #include "scanner.h"
 
-//
-// Constantes, variáveis e definições gerais
-//
-
 // O lexema
 token_t scanner_token;
 // A posição atual do analisador léxico
@@ -256,7 +252,7 @@ boolean_t scanner_step() {
 			scanner_position.line++;
 			scanner_position.column = 0;
 		} else scanner_position.column++;
-		scanner_position.input_position++;
+		scanner_position.index++;
 		return true;
 	}
 	return false;
@@ -292,8 +288,11 @@ void integer() {
 	index_t index = 0;
 	scanner_token.position = scanner_position;
 	scanner_token.value = 0;
+	id_t id;
 	while (index < SCANNER_MAX_ID_LENGTH && is_digit(scanner_char)) {
-		scanner_token.id[index++] = scanner_char;
+		id[index] = scanner_char;
+		scanner_token.id[index] = scanner_char;
+		index++;
 		// Efetua o cálculo do valor, dígito-a-dígito, com base nos caracteres lidos
 		scanner_token.value = 10 * scanner_token.value + (scanner_char - '0');
 		if (!scanner_step())
@@ -301,6 +300,16 @@ void integer() {
 	}
 	scanner_token.id[index] = '\0';
 	scanner_token.symbol = symbol_number;
+	// Avalia se há caracteres inválidos após os dígitos do número
+	boolean_t invalid_ending = false;
+	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || scanner_char == '_')) {
+		id[index++] = scanner_char;
+		invalid_ending	= true;
+		if (!scanner_step())
+			break;
+	}
+	if (invalid_ending)
+		errors_mark(error_warning, "\"%s\" is not a number. Assuming \"%s\".", id, scanner_token.id);
 }
 
 // Por definição, somente números positivos inteiros são reconhecidos
@@ -324,7 +333,7 @@ void comment() {
 		}
 		previous_char = scanner_char;
 	}
-	errors_mark(error_fatal, "Endless comment detected. Comencing “EARMUFFS” operation.");
+	errors_mark(error_fatal, "Endless comment detected.");
 	scanner_token.symbol = symbol_eof;
 }
 
@@ -370,6 +379,10 @@ void scanner_get() {
 	}
 	scanner_token.id[1] = '\0';
 	scanner_step();
+	if (scanner_token.symbol == symbol_null) {
+		errors_mark(error_scanner, "\"%s\" is not a valid symbol.", scanner_token.id);
+		return;
+	}
 	// Os casos abaixo representam os lexemas com mais de um caracter (como “>=”, “:=” etc.)
 	if (scanner_token.symbol == symbol_less && scanner_char == '=') {
 		scanner_token.id[1] = '=';
@@ -399,7 +412,7 @@ void scanner_initialize(file_t file) {
 	scanner_file = file;
 	scanner_position.line = 1;
 	scanner_position.column = 0;
-	scanner_position.input_position = 0;
+	scanner_position.index = 0;
 	scanner_error = false;
 	scanner_error_position = scanner_position;
 	scanner_char = '\0';
