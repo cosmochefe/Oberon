@@ -222,6 +222,180 @@ boolean_t is_first(string_t non_terminal, symbol_t symbol)
 
 boolean_t is_follow(string_t non_terminal, symbol_t symbol)
 {
+	if (strcmp(non_terminal, "selector") == 0)
+		return symbol == symbol_times ||
+					 symbol == symbol_div ||
+					 symbol == symbol_mod ||
+					 symbol == symbol_and ||
+					 symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_or ||
+					 symbol == symbol_equal ||
+					 symbol == symbol_not_equal ||
+					 symbol == symbol_less ||
+					 symbol == symbol_less_equal ||
+					 symbol == symbol_greater ||
+					 symbol == symbol_greater_equal ||
+					 symbol == symbol_comma ||
+					 symbol == symbol_close_paren ||
+					 symbol == symbol_close_bracket ||
+					 symbol == symbol_becomes ||
+					 symbol == symbol_of ||
+					 symbol == symbol_then ||
+					 symbol == symbol_do ||
+					 symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "factor") == 0)
+		return symbol == symbol_times ||
+					 symbol == symbol_div ||
+					 symbol == symbol_mod ||
+					 symbol == symbol_and ||
+					 symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_or ||
+					 symbol == symbol_equal ||
+					 symbol == symbol_not_equal ||
+					 symbol == symbol_less ||
+					 symbol == symbol_less_equal ||
+					 symbol == symbol_greater ||
+					 symbol == symbol_greater_equal ||
+					 symbol == symbol_comma ||
+					 symbol == symbol_close_paren ||
+					 symbol == symbol_close_bracket ||
+					 symbol == symbol_becomes ||
+					 symbol == symbol_of ||
+					 symbol == symbol_then ||
+					 symbol == symbol_do ||
+					 symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "term") == 0)
+		return symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_or ||
+					 symbol == symbol_equal ||
+					 symbol == symbol_not_equal ||
+					 symbol == symbol_less ||
+					 symbol == symbol_less_equal ||
+					 symbol == symbol_greater ||
+					 symbol == symbol_greater_equal ||
+					 symbol == symbol_comma ||
+					 symbol == symbol_close_paren ||
+					 symbol == symbol_close_bracket ||
+					 symbol == symbol_becomes ||
+					 symbol == symbol_of ||
+					 symbol == symbol_then ||
+					 symbol == symbol_do ||
+					 symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "simple_expr") == 0)
+		return symbol == symbol_plus ||
+					 symbol == symbol_minus ||
+					 symbol == symbol_or ||
+					 symbol == symbol_equal ||
+					 symbol == symbol_not_equal ||
+					 symbol == symbol_less ||
+					 symbol == symbol_less_equal ||
+					 symbol == symbol_greater ||
+					 symbol == symbol_greater_equal ||
+					 symbol == symbol_comma ||
+					 symbol == symbol_close_paren ||
+					 symbol == symbol_close_bracket ||
+					 symbol == symbol_becomes ||
+					 symbol == symbol_of ||
+					 symbol == symbol_then ||
+					 symbol == symbol_do ||
+					 symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "expr") == 0)
+		return symbol == symbol_comma ||
+					 symbol == symbol_close_paren ||
+					 symbol == symbol_close_bracket ||
+					 symbol == symbol_becomes ||
+					 symbol == symbol_of ||
+					 symbol == symbol_then ||
+					 symbol == symbol_do ||
+					 symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "assignment") == 0)
+		return symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "actual_params") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "proc_call") == 0)
+		return symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "if_stmt") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "while_stmt") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "repeat_stmt") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "stmt") == 0)
+		return symbol == symbol_semicolon ||
+					 symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "stmt_sequence") == 0)
+		return symbol == symbol_end ||
+					 symbol == symbol_else ||
+					 symbol == symbol_elsif ||
+					 symbol == symbol_until;
+	else if (strcmp(non_terminal, "id_list") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "array_type") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "field_list") == 0)
+		return symbol == symbol_semicolon ||
+					 symbol == symbol_end;
+	else if (strcmp(non_terminal, "record_type") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "type") == 0)
+		return symbol == symbol_close_paren ||
+					 symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "formal_params_section") == 0)
+		return symbol == symbol_close_paren ||
+					 symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "formal_params") == 0)
+		return symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "proc_head") == 0)
+		return symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "proc_body") == 0)
+		return symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "proc_decl") == 0)
+		return symbol == symbol_semicolon;
+	else if (strcmp(non_terminal, "const_decl") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "type_decl") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "var_decl") == 0)
+		return symbol == symbol_null;
+	else if (strcmp(non_terminal, "declarations") == 0)
+		return symbol == symbol_end ||
+					 symbol == symbol_begin;
+	else if (strcmp(non_terminal, "module") == 0)
+		return symbol == symbol_eof;
 	return false;
 }
 
@@ -235,7 +409,7 @@ string_t id_for_symbol(symbol_t symbol) {
 	for (index_t index = 0; index < scanner_punctuation_count; index++)
 		if (scanner_punctuation[index].symbol == symbol)
 			return scanner_punctuation[index].id;
-	return "Unknown";
+	return "unknown";
 }
 
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar

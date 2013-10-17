@@ -15,7 +15,7 @@ void errors_mark(const error_t error, const string_t message, ...) {
 	if (error > error_warning)
 		errors_count++;
 	if (errors_count > ERRORS_BAD_CODE_TOLERANCE) {
-		printf("That's it. I quit!\n");
+		printf("%d errors? That's it. I quit!\n", ERRORS_BAD_CODE_TOLERANCE);
 		exit(EXIT_FAILURE);
 	}
 	switch (error) {
