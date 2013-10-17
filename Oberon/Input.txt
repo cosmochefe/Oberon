@@ -15,7 +15,7 @@ VAR
 BEGIN Read(x); Read(y); z := 0;
 	WHILE x > 0 DO
 		IF x MOD 2 = 1 THEN z := z + y END;
-		y = 2*y; x := x DIV 2
+		y := 2*y; x := x DIV 2
 	END;
 	Write(x); Write(y); Write(z); WriteLn
 END Multiply;
@@ -39,11 +39,11 @@ VAR
 	i, j, k, n, x: INTEGER;
 	a: ARRAY 32 OF INTEGER;
 BEGIN Read(n); k := 0;
-	WHILE k < n DO Read(a[k); k := k + 1 END
-	Read(x); i := 0; j := n;
+	WHILE k < n DO Read(a[k); k := k + 1 END;
+	Read(x); i := 0 j := n;
 	WHILE i < j DO
 		k := (i+j) DIV 2;
-		IF x < a[k] THEN j := k ELSE i := k+1 END
+		IF x < a[k] THEN j := k ELSE i := k+1
 	END;
 	Write(i); Write(j); Write(a[j]); WriteLn
 END BinSearch;

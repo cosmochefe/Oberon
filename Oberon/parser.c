@@ -103,10 +103,13 @@
 // Registro de ocorrências
 boolean_t parser_should_log;
 
-void parser_next() {
+boolean_t parser_next() {
+	if (scanner_token.symbol == symbol_eof)
+		return false;
 	do {
 		scanner_get();
 	} while (scanner_token.symbol == symbol_null);
+	return scanner_token.symbol == symbol_eof;
 }
 
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
@@ -119,11 +122,11 @@ boolean_t parser_assert(symbol_t symbol, boolean_t should_mark_error) {
 	}
 	if (should_mark_error) {
 		if (symbol == symbol_id)
-			errors_mark(error_parser, "Identifier missing.");
+			errors_mark(error_parser, "Missing identifier.");
 		else if (symbol == symbol_number)
-			errors_mark(error_parser, "Number missing.");
+			errors_mark(error_parser, "Missing number.");
 		else
-			errors_mark(error_parser, "\"%s\" missing.", id_for_symbol(symbol));
+			errors_mark(error_parser, "Missing \"%s\".", id_for_symbol(symbol));
 	}
 	return false;
 }
@@ -167,7 +170,10 @@ boolean_t factor() {
 			result = factor();
 			break;
 		default:
+			// Sincroniza
 			errors_mark(error_parser, "Missing factor.");
+			while (!is_follow("factor", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
+				parser_next();
 			result = false;
 			break;
 	}
@@ -335,9 +341,9 @@ boolean_t stmt() {
 		else if (is_first("proc_call", scanner_token.symbol) || is_follow("proc_call", scanner_token.symbol))
 			result = proc_call();
 		else {
-			// Avança até o símbolo que viria depois de um dos dois casos (“assignment” ou “proc_call”)
+			// Sincroniza
 			errors_mark(error_parser, "Invalid statement.");
-			while (!is_follow("assignment", scanner_token.symbol) && !is_follow("proc_call", scanner_token.symbol))
+			while (!is_follow("stmt", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
 				parser_next();
 		}
 	}	else if (is_first("if_stmt", scanner_token.symbol))
@@ -346,6 +352,12 @@ boolean_t stmt() {
 		result = while_stmt();
 	else if (is_first("repeat_stmt", scanner_token.symbol))
 		result = repeat_stmt();
+	// Sincroniza
+	if (!is_follow("stmt", scanner_token.symbol)) {
+		errors_mark(error_parser, "Missing \";\" or \"end\".");
+		while (!is_follow("stmt", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
+			parser_next();
+	}
 	return result;
 }
 
@@ -416,8 +428,12 @@ boolean_t type() {
 		result = array_type();
 	else if (is_first("record_type", scanner_token.symbol))
 		result = record_type();
-	else
-		errors_mark(error_parser, "Type missing.");
+	else {
+		// Sincroniza
+		errors_mark(error_parser, "Missing type.");
+		while (!is_follow("type", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
+			parser_next();
+	}
 	return result;
 }
 
@@ -502,7 +518,7 @@ boolean_t const_decl() {
 	result = parser_assert(symbol_const, false);
 	while (scanner_token.symbol == symbol_id) {
 		result = parser_assert(symbol_id, false);
-		result = parser_assert(symbol_equal, true); // FAZER: Melhorar erro para o “igual”
+		result = parser_assert(symbol_equal, true);
 		result = expr();
 		result = parser_assert(symbol_semicolon, true);
 	}
