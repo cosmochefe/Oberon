@@ -87,25 +87,30 @@ const index_t scanner_punctuation_count = sizeof(scanner_keywords) / sizeof(lexe
 //
 
 // As funções “is_letter”, “is_digit” e “is_blank” chamam as versões internas da linguagem C. Por enquanto...
-boolean_t is_letter(char c) {
+boolean_t is_letter(char c)
+{
 	return isalpha(c);
 }
 
-boolean_t is_digit(char c) {
+boolean_t is_digit(char c)
+{
 	return isdigit(c);
 }
 
-boolean_t is_blank(char c) {
+boolean_t is_blank(char c)
+{
 	return isspace(c);
 }
 
-boolean_t is_newline(char c, char p) {
+boolean_t is_newline(char c, char p)
+{
 	return (c == '\n' && p != '\r') || c == '\r';
 }
 
 // Esta função é responsável por verificar se o identificar “id” é uma palavra reservada ou não
 // O símbolo equivalente à palavra reservada é armazenado via referência no parâmetro “symbol”
-boolean_t is_keyword(identifier_t id, symbol_t *symbol) {
+boolean_t is_keyword(identifier_t id, symbol_t *symbol)
+{
 	index_t index = 0;
 	while (index < scanner_keywords_count && strcasecmp(scanner_keywords[index].id, id) != 0)
 		index++;
@@ -399,7 +404,8 @@ boolean_t is_follow(string_t non_terminal, symbol_t symbol)
 	return false;
 }
 
-string_t id_for_symbol(symbol_t symbol) {
+string_t id_for_symbol(symbol_t symbol)
+{
 	for (index_t index = 0; index < scanner_keywords_count; index++)
 		if (scanner_keywords[index].symbol == symbol)
 			return scanner_keywords[index].id;
@@ -413,7 +419,8 @@ string_t id_for_symbol(symbol_t symbol) {
 }
 
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
-boolean_t scanner_step() {
+boolean_t scanner_step()
+{
 	scanner_last_char = scanner_char;
 	if (fread(&scanner_char, sizeof(char), 1, input_file) == sizeof(char)) {
 		if (is_newline(scanner_char, scanner_last_char)) {
@@ -436,7 +443,8 @@ boolean_t scanner_step() {
 // fazendo com que a análise léxica seja realizada por um “mini descendente recursivo” ao invés de um autômato finito
 //
 
-void id() {
+void id()
+{
 	index_t index = 0;
 	scanner_token.position = scanner_position;
 	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || is_digit(scanner_char))) {
@@ -452,7 +460,8 @@ void id() {
 }
 
 // FAZER: Adicionar verificação se o número é muito longo
-void integer() {
+void integer()
+{
 	index_t index = 0;
 	scanner_token.position = scanner_position;
 	scanner_token.value = 0;
@@ -481,13 +490,15 @@ void integer() {
 }
 
 // Por definição, somente números positivos inteiros são reconhecidos
-void number() {
+void number()
+{
 	integer();
 }
 
 // Ao entrar nesta função, o analisador léxico já encontrou os caracteres "(*" que iniciam o comentário e “scanner_char”
 // possui o asterisco como valor
-void comment() {
+void comment()
+{
 	char previous_char = scanner_char;
 	scanner_token.position = scanner_position;
 	while (scanner_step()) {
@@ -505,7 +516,8 @@ void comment() {
 	scanner_token.symbol = symbol_eof;
 }
 
-void scanner_get() {
+void scanner_get()
+{
 	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
 	while (is_blank(scanner_char))
 		scanner_step();
@@ -576,7 +588,8 @@ void scanner_get() {
 	}
 }
 
-void scanner_initialize() {
+void scanner_initialize()
+{
 	scanner_position.line = 1;
 	scanner_position.column = 0;
 	scanner_position.index = 0;

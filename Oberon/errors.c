@@ -11,7 +11,8 @@
 unsigned int errors_count = 0;
 
 // Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
-void errors_mark(const error_t error, const string_t message, ...) {
+void errors_mark(const error_t error, const string_t message, ...)
+{
 	if (error > error_warning)
 		errors_count++;
 	if (errors_count > ERRORS_BAD_CODE_TOLERANCE) {

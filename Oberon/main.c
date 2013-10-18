@@ -30,7 +30,8 @@ file_t output_file;
 // Ponto de entrada do programa
 //
 
-int main(int argc, const string_t argv[]) {
+int main(int argc, const string_t argv[])
+{
 	input_file = fopen(input_path, "r");
 	output_file = fopen(output_path, "w");
 	if (!input_file || !output_file) {
