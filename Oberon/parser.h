@@ -16,6 +16,7 @@
 #include "types.h"
 #include "errors.h"
 #include "scanner.h"
+#include "symbol_table.h"
 
 //
 // Pré-definições

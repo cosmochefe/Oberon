@@ -584,14 +584,19 @@ boolean_t module() {
 	return result;
 }
 
-// Retorna se a inicialização do analisador léxico obteve sucesso ou não e se o arquivo estava em branco
+// Retorna se a inicialização do analisador léxico  e da tabela de símbolos obteve sucesso ou não e se o arquivo de 
+// entrada estava em branco
 boolean_t parser_initialize() {
 	parser_should_log = false;
+	if (!symbol_table_initialize())
+		return false;
 	scanner_initialize();
 	scanner_get();
 	return scanner_token.symbol != symbol_eof;
 }
 
 boolean_t parser_run() {
-	return module();
+	boolean_t result = module();
+	symbol_table_clear();
+	return result;
 }
