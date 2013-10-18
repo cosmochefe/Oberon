@@ -9,9 +9,25 @@
 #include "symbol_table.h"
 
 object_t *symbol_table;
-object_t *symbol_table_last;
 
 position_t position_zero = { .line = 0, .column = 0, .index = 0 };
+
+boolean_t symbol_table_initialize() {
+	table_clear(&symbol_table);
+	// Cria os tipos elementares
+	type_t *type = type_create(type_form_atomic, 0, NULL);
+	if (!type) {
+		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
+		return false;
+	}
+	object_t *base_type = table_add_type("integer", position_zero, type, &symbol_table);
+	if (!base_type) {
+		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
+		free(type);
+		return false;
+	}
+	return true;
+}
 
 type_t *type_create(type_form_t form, index_t length, type_t *base) {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
@@ -21,66 +37,32 @@ type_t *type_create(type_form_t form, index_t length, type_t *base) {
 	}
 	type->form = form;
 	type->length = length;
+	type->size = 0;
 	type->fields = NULL;
 	type->base = base;
 	return type;
 }
 
-boolean_t type_add_field(token_t token, type_t *type, type_t *record_type) {
-	object_t *field = (object_t *)malloc(sizeof(object_t));
-	if (!field) {
-		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		return false;
-	}
-	strcpy(field->id, token.id);
-	field->position = token.position;
-	field->class = class_var;
-	field->type = type;
-	field->value = 0;
-	field->next = NULL;
-	object_t *current = record_type->fields;
-	while (current && current->next)
-		current = current->next;
-	current->next = field;
-	return true;
-}
-
-void symbol_table_clear() {
-	while (symbol_table) {
-		object_t *current = symbol_table;
-		symbol_table = current->next;
+void table_clear(object_t **reference) {
+	object_t *t = *reference;
+	while (t) {
+		object_t *current = t;
+		t = current->next;
+		if (current->type && current->type->fields)
+			table_clear(&current->type->fields);
 		free(current);
 	}
-	symbol_table = NULL;
-	symbol_table_last = NULL;
+	*reference = NULL;
 }
 
-boolean_t symbol_table_initialize() {
-	symbol_table_clear();
-	// Cria os tipos elementares
-	object_t *base_type = (object_t *)malloc(sizeof(object_t));
-	type_t *type = (type_t *)malloc(sizeof(type_t));
-	if (!base_type || !type) {
-		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		return false;
+void table_log(object_t *table) {
+	while (table) {
+		printf("Object: %s\n", table->id);
+		table = table->next;
 	}
-	type->form = type_form_atomic;
-	type->length = 0;
-	type->size = sizeof(int8_t);
-	type->fields = NULL;
-	type->base = NULL;
-	strcpy(base_type->id, "integer");
-	base_type->position = position_zero;
-	base_type->address = 0;
-	base_type->class = class_type;
-	base_type->type = type;
-	base_type->value = 0;
-	base_type->next = NULL;
-	symbol_table = base_type;
-	return true;
 }
 
-object_t *symbol_table_find(identifier_t id, object_t *table) {
+object_t *table_find(identifier_t id, object_t *table) {
 	object_t *current = table;
 	while (current) {
 		if (strcasecmp(current->id, id) == 0)
@@ -90,33 +72,49 @@ object_t *symbol_table_find(identifier_t id, object_t *table) {
 	return current;
 }
 
-boolean_t symbol_table_add(token_t token, class_t class, type_t *type, value_t value, object_t *table) {
-	object_t *new_object = symbol_table_find(token.id, table);
+object_t *table_add(identifier_t id, position_t p, class_t c, type_t *t, value_t v, object_t **reference) {
+	if (!reference)
+		return NULL;
+	object_t *table = *reference;
+	object_t *new_object = table_find(id, table);
 	if (new_object) {
-		errors_mark(error_parser, "The identifier \"%s\" has already been declared.", token.id);
-		return false;
+		errors_mark(error_parser, "The identifier \"%s\" has already been declared.", id);
+		return NULL;
 	}
 	new_object = (object_t *)malloc(sizeof(object_t));
 	if (!new_object) {
 		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		return false;
+		return NULL;
 	}
-	strcpy(new_object->id, token.id);
-	new_object->position = token.position;
-	new_object->class = class;
-	new_object->type = type;
-	new_object->value = value;
+	strcpy(new_object->id, id);
+	new_object->position = p;
+	new_object->address = 0;
+	new_object->class = c;
+	new_object->type = t;
+	new_object->value = v;
 	new_object->next = NULL;
-	while (table && table->next)
-		table = table->next;
-	table->next = new_object;
-	return true;
+	if (!table)
+		*reference = new_object;
+	else {
+		while (table && table->next)
+			table = table->next;
+		table->next = new_object;
+	}
+	return new_object;
 }
 
-void symbol_table_log() {
-	object_t *current = symbol_table;
-	while (current) {
-		printf("Object: %s\n", current->id);
-		current = current->next;
-	}
+object_t *table_add_const(identifier_t id, position_t position, value_t value, object_t **reference) {
+	return table_add(id, position, class_const, NULL, value, reference);
+}
+
+object_t *table_add_type(identifier_t id, position_t position, type_t *type, object_t **reference) {
+	return table_add(id, position, class_type, type, 0, reference);
+}
+
+object_t *table_add_var(identifier_t id, position_t position, type_t *type, object_t **reference) {
+	return table_add(id, position, class_var, type, 0, reference);
+}
+
+object_t *table_add_proc(identifier_t id, position_t position, type_t *type, object_t **reference) {
+	return table_add(id, position, class_proc, type, 0, reference);
 }

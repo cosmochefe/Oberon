@@ -59,13 +59,16 @@ extern object_t *symbol_table;
 // Pré-definições
 //
 
-type_t *type_create(type_form_t form, index_t length, type_t *base);
-boolean_t type_add_field(token_t token, type_t *type, type_t *record_type);
-
-void symbol_table_clear();
 boolean_t symbol_table_initialize();
-object_t *symbol_table_find(identifier_t id, object_t *table);
-boolean_t symbol_table_add(token_t token, class_t class, type_t *type, value_t value, object_t *table);
-void symbol_table_log();
+
+type_t *type_create(type_form_t form, index_t length, type_t *base);
+
+void table_clear(object_t **table);
+void table_log(object_t *table);
+object_t *table_find(identifier_t id, object_t *table);
+object_t *table_add_const(identifier_t id, position_t position, value_t value, object_t **table);
+object_t *table_add_type(identifier_t id, position_t position, type_t *type, object_t **table);
+object_t *table_add_var(identifier_t id, position_t position, type_t *type, object_t **table);
+object_t *table_add_proc(identifier_t id, position_t position, type_t *type, object_t **table);
 
 #endif

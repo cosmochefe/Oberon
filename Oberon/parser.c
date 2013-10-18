@@ -597,6 +597,6 @@ boolean_t parser_initialize() {
 
 boolean_t parser_run() {
 	boolean_t result = module();
-	symbol_table_clear();
+	table_clear(&symbol_table);
 	return result;
 }
