@@ -17,17 +17,19 @@ boolean_t symbol_table_initialize(address_t base_address)
 	table_clear(&symbol_table);
 	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
-	type_t *type = type_create(form_atomic, 0, sizeof(int8_t), NULL);
-	if (!type) {
-		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		return false;
-	}
-	entry_t *base_type = table_add_type("integer", position_zero, type, &symbol_table);
+	type_t *base_type = type_create(form_atomic, 0, sizeof(int8_t), NULL);
 	if (!base_type) {
 		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		free(type);
 		return false;
 	}
+	entry_t *type = entry_create("integer", position_zero, class_type);
+	if (!type) {
+		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
+		free(base_type);
+		return false;
+	}
+	type->type = base_type;
+	table_append(type, &symbol_table);
 	return true;
 }
 
@@ -44,6 +46,23 @@ type_t *type_create(form_t form, value_t length, size_t size, type_t *base)
 	type->fields = NULL;
 	type->base = base;
 	return type;
+}
+
+entry_t *entry_create(identifier_t id, position_t position, class_t class)
+{
+	entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
+	if (!new_entry) {
+		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
+		return NULL;
+	}
+	strcpy(new_entry->id, id);
+	new_entry->position = position;
+	new_entry->address = 0;
+	new_entry->class = class;
+	new_entry->type = NULL;
+	new_entry->value = 0;
+	new_entry->next = NULL;
+	return new_entry;
 }
 
 void table_clear(entry_t **ref)
@@ -81,11 +100,16 @@ entry_t *table_find(identifier_t id, entry_t *table)
 	return current;
 }
 
-void table_append(entry_t *entry, entry_t **ref)
+boolean_t table_append(entry_t *entry, entry_t **ref)
 {
-	if (!ref)
-		return;
+	if (!ref || !entry)
+		return false;
 	entry_t *table = *ref;
+	if (table_find(entry->id, table)) {
+		// FAZER: Melhorar a mensagem de erro adicionando a posição do objecto já declarado
+		errors_mark(error_parser, "The identifier \"%s\" has already been declared.", entry->id);
+		return false;
+	}
 	if (!table)
 		*ref = entry;
 	else {
@@ -93,56 +117,5 @@ void table_append(entry_t *entry, entry_t **ref)
 			table = table->next;
 		table->next = entry;
 	}
-}
-
-entry_t *table_add(identifier_t id, position_t position, class_t class, type_t *type, value_t value, entry_t **ref)
-{
-	if (!ref)
-		return NULL;
-	entry_t *table = *ref;
-	entry_t *new_entry = table_find(id, table);
-	if (new_entry) {
-		errors_mark(error_parser, "The identifier \"%s\" has already been declared.", id);
-		return NULL;
-	}
-	new_entry = (entry_t *)malloc(sizeof(entry_t));
-	if (!new_entry) {
-		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
-		return NULL;
-	}
-	strcpy(new_entry->id, id);
-	new_entry->position = position;
-	new_entry->address = 0;
-	new_entry->class = class;
-	new_entry->type = type;
-	new_entry->value = value;
-	new_entry->next = NULL;
-	if (!table)
-		*ref = new_entry;
-	else {
-		while (table->next)
-			table = table->next;
-		table->next = new_entry;
-	}
-	return new_entry;
-}
-
-entry_t *table_add_const(identifier_t id, position_t position, value_t value, entry_t **ref)
-{
-	return table_add(id, position, class_const, NULL, value, ref);
-}
-
-entry_t *table_add_type(identifier_t id, position_t position, type_t *type, entry_t **ref)
-{
-	return table_add(id, position, class_type, type, 0, ref);
-}
-
-entry_t *table_add_var(identifier_t id, position_t position, type_t *type, entry_t **ref)
-{
-	return table_add(id, position, class_var, type, 0, ref);
-}
-
-entry_t *table_add_proc(identifier_t id, position_t position, type_t *type, entry_t **reference)
-{
-	return table_add(id, position, class_proc, type, 0, reference);
+	return true;
 }

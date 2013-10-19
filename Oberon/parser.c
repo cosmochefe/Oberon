@@ -321,14 +321,13 @@ void stmt_sequence()
 entry_t *id_list()
 {
 	parser_assert(symbol_id);
-	entry_t *entries = NULL;
-	table_add_var(scanner_last_token.id, scanner_last_token.position, NULL, &entries);
+	entry_t *new_entries = entry_create(scanner_last_token.id, scanner_last_token.position, class_var);
 	while (scanner_token.symbol == symbol_comma) {
 		parser_assert(symbol_comma);
 		if (parser_assert(symbol_id))
-			table_add_var(scanner_last_token.id, scanner_last_token.position, NULL, &entries);
+			table_append(entry_create(scanner_last_token.id, scanner_last_token.position, class_var), &new_entries);
 	}
-	return entries;
+	return new_entries;
 }
 
 type_t *type();
@@ -343,22 +342,25 @@ type_t *array_type()
 		length = scanner_last_token.value;
 	parser_assert(symbol_of);
 	type_t *base = type();
-	return type_create(form_array, length, length * base->size, base);
+	size_t size = 0;
+	if (base)
+		size = length * base->size;
+	return type_create(form_array, length, size, base);
 }
 
 // field_list = [id_list ":" type]
 entry_t *field_list()
 {
 	if (is_first("id_list", scanner_token.symbol)) {
-		entry_t *entries = id_list();
+		entry_t *new_fields = id_list();
 		parser_assert(symbol_colon);
-		type_t *base = type();
-		entry_t *p = entries;
-		while (p) {
-			p->type = base;
-			p = p->next;
+		type_t *base_type = type();
+		entry_t *e = new_fields;
+		while (e) {
+			e->type = base_type;
+			e = e->next;
 		}
-		return entries;
+		return new_fields;
 	}
 	return NULL;
 }
@@ -367,20 +369,24 @@ entry_t *field_list()
 type_t *record_type()
 {
 	parser_assert(symbol_record);
-	type_t *new_type = type_create(form_record, 0, 0, NULL);
-	table_append(field_list(), &new_type->fields);
+	entry_t *fields = field_list();
 	while (scanner_token.symbol == symbol_semicolon) {
 		parser_assert(symbol_semicolon);
-		table_append(field_list(), &new_type->fields);
+		entry_t *more_fields = field_list();
+		if (fields && more_fields)
+			table_append(more_fields, &fields);
 	}
 	// Efetua o cálculo do tamanho do tipo registro com base em seus campos
-	entry_t *p = new_type->fields;
-	while (p) {
-		new_type->size += p->type->size;
-		p = p->next;
+	value_t size = 0;
+	if (fields) {
+		entry_t *e = fields;
+		while (e && e->type) {
+			size += e->type->size;
+			e = e->next;
+		}
 	}
 	parser_assert(symbol_end);
-	return new_type;
+	return type_create(form_record, 0, size, NULL);
 }
 
 // type = id | array_type | record_type
@@ -403,37 +409,44 @@ type_t *type()
 		if (!new_type)
 			errors_mark(error_parser, "Invalid record type.");
 		return new_type;
-	} else {
-		// Sincroniza
-		errors_mark(error_parser, "Missing type.");
-		while (!is_follow("type", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
-			parser_next();
 	}
+	// Sincroniza
+	errors_mark(error_parser, "Missing type.");
+	while (!is_follow("type", scanner_token.symbol) && scanner_token.symbol != symbol_eof)
+		parser_next();
 	return NULL;
 }
 
 // formal_params_section = ["var"] id_list ":" type
-void formal_params_section()
+entry_t *formal_params_section()
 {
 	if (scanner_token.symbol == symbol_var)
 		parser_assert(symbol_var);
-	entry_t *entries = id_list();
+	entry_t *new_params = id_list();
 	parser_assert(symbol_colon);
-	type_t *base = type();
+	type_t *base_type = type();
+	entry_t *e = new_params;
+	while (e) {
+		e->type = base_type;
+		e = e->next;
+	}
+	return new_params;
 }
 
 // formal_params = "(" [formal_params_section {";" formal_params_section}] ")"
-void formal_params()
+entry_t *formal_params()
 {
+	entry_t *params = NULL;
 	parser_assert(symbol_open_paren);
 	if (is_first("formal_params_section", scanner_token.symbol)) {
-		formal_params_section();
+		params = formal_params_section();
 		while (scanner_token.symbol == symbol_semicolon) {
 			parser_assert(symbol_semicolon);
-			formal_params_section();
+			table_append(formal_params_section(), &params);
 		}
 	}
 	parser_assert(symbol_close_paren);
+	return params;
 }
 
 // proc_head = "procedure" id [formal_params]
@@ -441,6 +454,7 @@ void proc_head()
 {
 	parser_assert(symbol_proc);
 	parser_assert(symbol_id);
+	// FAZER: Implementar parâmetros para a entrada do procedimento na tabela de símbolos
 	if (is_first("formal_params", scanner_token.symbol))
 		formal_params();
 }
@@ -488,8 +502,14 @@ void const_decl()
 	parser_assert(symbol_const);
 	while (scanner_token.symbol == symbol_id) {
 		parser_assert(symbol_id);
+		entry_t *new_entry = entry_create(scanner_last_token.id, scanner_last_token.position, class_const);
 		parser_assert(symbol_equal);
-		expr();
+		// expr();
+		parser_assert(symbol_number);
+		if (new_entry) {
+			new_entry->value = scanner_last_token.value;
+			table_append(new_entry, &symbol_table);
+		}
 		parser_assert(symbol_semicolon);
 	}
 }
@@ -500,12 +520,14 @@ void type_decl()
 	parser_assert(symbol_type);
 	while (scanner_token.symbol == symbol_id) {
 		parser_assert(symbol_id);
-		entry_t *new_entry = table_add_type(scanner_last_token.id, scanner_last_token.position, NULL, &symbol_table);
+		entry_t *new_entry = entry_create(scanner_last_token.id, scanner_last_token.position, class_type);
 		// FAZER: Melhorar erro para o “igual”
 		parser_assert(symbol_equal);
 		type_t *base = type();
-		if (new_entry && base)
+		if (new_entry && base) {
 			new_entry->type = base;
+			table_append(new_entry, &symbol_table);
+		}
 		parser_assert(symbol_semicolon);
 	}
 }
@@ -515,17 +537,18 @@ void var_decl()
 {
 	parser_assert(symbol_var);
 	while (is_first("id_list", scanner_token.symbol)) {
-		entry_t *entries = id_list();
+		entry_t *new_entries = id_list();
 		parser_assert(symbol_colon);
 		type_t *base = type();
-		entry_t *p = entries;
-		while (p) {
-			p->address = current_address;
-			p->type = base;
-			current_address += p->type->size;
-			p = p->next;
+		entry_t *e = new_entries;
+		while (e && base) {
+			e->address = current_address;
+			e->type = base;
+			current_address += e->type->size;
+			e = e->next;
 		}
-		table_append(entries, &symbol_table);
+		if (new_entries)
+			table_append(new_entries, &symbol_table);
 		parser_assert(symbol_semicolon);
 	}
 }
@@ -576,7 +599,6 @@ boolean_t parser_initialize()
 boolean_t parser_run()
 {
 	module();
-	table_log(symbol_table);
 	table_clear(&symbol_table);
 	return true;
 }
