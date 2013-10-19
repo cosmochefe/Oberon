@@ -376,11 +376,14 @@ type_t *record_type()
 		if (fields && more_fields)
 			table_append(more_fields, &fields);
 	}
-	// Efetua o cálculo do tamanho do tipo registro com base em seus campos
+	// Efetua o cálculo do tamanho do tipo registro e dos deslocamentos de cada campo
 	value_t size = 0;
+	address_t offset = 0;
 	if (fields) {
 		entry_t *e = fields;
 		while (e && e->type) {
+			e->address = offset;
+			offset += e->type->size;
 			size += e->type->size;
 			e = e->next;
 		}
