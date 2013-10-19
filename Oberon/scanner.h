@@ -98,7 +98,9 @@ typedef struct _token {
 } token_t;
 
 extern token_t scanner_token;
+extern token_t scanner_last_token;
 extern position_t scanner_position;
+extern const position_t position_zero;
 
 //
 // Pré-definições

@@ -15,13 +15,56 @@
 //	- end else elsif if while repeat
 //	- array record const type var procedure begin module
 //
+// Conjuntos first(K), com ø indicando o vazio:
+//
+//	- selector = . { ø
+//	- factor = ( ~ number id
+//	- term = ( ~ number id
+//	- simple_expr = + - ( ~ number id
+//	- expr = + - ( ~ number id
+//	- assignment = id
+//	- proc_call = id
+//	- stmt = id if while repeat ø
+//	- stmt_sequence = id if while repeat ø
+//	- field_list = id ø
+//	- type = id array record
+//	- formal_params_section = id var
+//	- formal_params = (
+//	- proc_head = procedure
+//	-	proc_body = end const type var procedure begin
+//	- proc_decl = procedure
+//	- declarations = const type var procedure ø
+//	- module = module
+//
+// Conjuntos follow(K), com ø indicando o vazio:
+//
+//	- selector = * div mod & + - or = # < <= > >= , ) ] := of then do ; end else elsif until
+//	- factor = * div mod & + - or = # < <= > >= , ) ] of then do ; end else elsif until
+//	- term = + - or = # < <= > >= , ) ] of then do ; end else elsif until
+//	- simple_expr = = # < <= > >= , ) ] of then do ; end else elsif until
+//	- expr = , ) ] of then do ; end else elsif until
+//	- assignment = ; end else elsif until
+//	- proc_call = ; end else elsif until
+//	- stmt = ; end else elsif until
+//	- stmt_sequence = end else elsif until
+//	- field_list = ; end
+//	- type = ) ;
+//	- formal_params_section = ) ;
+//	- formal_params = ;
+//	- proc_head = ;
+//	-	proc_body = ;
+//	- proc_decl = ;
+//	- declarations = end begin
+//
 
 #include "scanner.h"
 
-// O lexema lido
 token_t scanner_token;
-// A posição atual do analisador léxico
+token_t scanner_last_token;
+
 position_t scanner_position;
+const position_t position_zero = { .line = 0, .column = 0, .index = 0 };
+
 
 char scanner_char;
 char scanner_last_char;
@@ -518,6 +561,7 @@ void comment()
 
 void scanner_get()
 {
+	scanner_last_token = scanner_token;
 	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
 	while (is_blank(scanner_char))
 		scanner_step();
@@ -590,6 +634,10 @@ void scanner_get()
 
 void scanner_initialize()
 {
+	strcpy(scanner_token.id, "");
+	scanner_token.position = position_zero;
+	scanner_token.symbol = symbol_null;
+	scanner_token.value = 0;
 	scanner_position.line = 1;
 	scanner_position.column = 0;
 	scanner_position.index = 0;

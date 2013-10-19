@@ -9,11 +9,11 @@
 #include "symbol_table.h"
 
 entry_t *symbol_table;
+address_t current_address;
 
-position_t position_zero = { .line = 0, .column = 0, .index = 0 };
-
-boolean_t symbol_table_initialize()
+boolean_t symbol_table_initialize(address_t base_address)
 {
+	current_address = base_address;
 	table_clear(&symbol_table);
 	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
@@ -31,7 +31,7 @@ boolean_t symbol_table_initialize()
 	return true;
 }
 
-type_t *type_create(form_t form, index_t length, size_t size, type_t *base)
+type_t *type_create(form_t form, value_t length, size_t size, type_t *base)
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
@@ -65,7 +65,7 @@ void table_clear(entry_t **ref)
 void table_log(entry_t *table)
 {
 	while (table) {
-		errors_mark(error_log, "Entry %s\n", table->id);
+		errors_mark(error_log, "Entry \"%s\" found.", table->id);
 		table = table->next;
 	}
 }
@@ -79,6 +79,20 @@ entry_t *table_find(identifier_t id, entry_t *table)
 		current = current->next;
 	}
 	return current;
+}
+
+void table_append(entry_t *entry, entry_t **ref)
+{
+	if (!ref)
+		return;
+	entry_t *table = *ref;
+	if (!table)
+		*ref = entry;
+	else {
+		while (table->next)
+			table = table->next;
+		table->next = entry;
+	}
 }
 
 entry_t *table_add(identifier_t id, position_t position, class_t class, type_t *type, value_t value, entry_t **ref)
