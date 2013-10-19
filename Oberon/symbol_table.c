@@ -17,7 +17,7 @@ boolean_t symbol_table_initialize(address_t base_address)
 	table_clear(&symbol_table);
 	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
-	type_t *base_type = type_create(form_atomic, 0, sizeof(int8_t), NULL);
+	type_t *base_type = type_create(form_atomic, 0, sizeof(int8_t), NULL, NULL);
 	if (!base_type) {
 		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return false;
@@ -33,7 +33,7 @@ boolean_t symbol_table_initialize(address_t base_address)
 	return true;
 }
 
-type_t *type_create(form_t form, value_t length, size_t size, type_t *base)
+type_t *type_create(form_t form, value_t length, size_t size, entry_t *fields, type_t *base)
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
@@ -43,7 +43,7 @@ type_t *type_create(form_t form, value_t length, size_t size, type_t *base)
 	type->form = form;
 	type->length = length;
 	type->size = size;
-	type->fields = NULL;
+	type->fields = fields;
 	type->base = base;
 	return type;
 }

@@ -345,7 +345,7 @@ type_t *array_type()
 	size_t size = 0;
 	if (base)
 		size = length * base->size;
-	return type_create(form_array, length, size, base);
+	return type_create(form_array, length, size, NULL, base);
 }
 
 // field_list = [id_list ":" type]
@@ -386,13 +386,14 @@ type_t *record_type()
 		}
 	}
 	parser_assert(symbol_end);
-	return type_create(form_record, 0, size, NULL);
+	return type_create(form_record, 0, size, fields, NULL);
 }
 
 // type = id | array_type | record_type
 type_t *type()
 {
 	if (scanner_token.symbol == symbol_id) {
+		// Qualquer tipo atômico deve ser baseado em um dos tipos internos da linguagem (neste caso apenas “integer”)
 		parser_assert(symbol_id);
 		entry_t *entry = table_find(scanner_last_token.id, symbol_table);
 		if (entry)

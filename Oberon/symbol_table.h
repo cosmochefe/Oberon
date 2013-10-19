@@ -64,7 +64,7 @@ extern address_t current_address;
 
 boolean_t symbol_table_initialize(address_t base_address);
 
-type_t *type_create(form_t form, value_t length, size_t size, type_t *base);
+type_t *type_create(form_t form, value_t length, size_t size, entry_t *fields, type_t *base);
 entry_t *entry_create(identifier_t id, position_t position, class_t class);
 
 void table_clear(entry_t **ref);
