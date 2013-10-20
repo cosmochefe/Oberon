@@ -10,11 +10,9 @@
 #define Oberon_scanner_h
 
 #include <stdio.h>
-#include <strings.h>
-#include <ctype.h>
+#include <stdbool.h>
 
-#include "types.h"
-#include "errors.h"
+#include "backend.h"
 
 #define SCANNER_MAX_ID_LENGTH 16
 
@@ -68,8 +66,6 @@ typedef enum _symbol {
 
 typedef char identifier_t[SCANNER_MAX_ID_LENGTH + 1];
 
-typedef long int value_t;
-
 typedef struct _position {
 	unsigned int line;
 	unsigned int column;
@@ -81,18 +77,8 @@ typedef struct _lexem {
 	symbol_t symbol;
 } lexem_t;
 
-extern lexem_t scanner_keywords[];
-extern const index_t scanner_keywords_count;
-
-extern lexem_t scanner_operators[];
-extern const index_t scanner_operators_count;
-
-extern lexem_t scanner_punctuation[];
-extern const index_t scanner_punctuation_count;
-
 typedef struct _token {
-	identifier_t id;
-	symbol_t symbol;
+	lexem_t lexem;
 	value_t value;
 	position_t position;
 } token_t;
@@ -102,22 +88,12 @@ extern token_t scanner_last_token;
 extern position_t scanner_position;
 extern const position_t position_zero;
 
-//
-// Pré-definições
-//
+bool is_first(const char *non_terminal, symbol_t symbol);
+bool is_follow(const char *non_terminal, symbol_t symbol);
 
-boolean_t is_letter(char c);
-boolean_t is_digit(char c);
-boolean_t is_blank(char c);
+char *id_for_symbol(symbol_t symbol);
 
-boolean_t is_keyword(identifier_t id, symbol_t *symbol);
-
-boolean_t is_first(string_t non_terminal, symbol_t symbol);
-boolean_t is_follow(string_t non_terminal, symbol_t symbol);
-
-string_t id_for_symbol(symbol_t symbol);
-
-void scanner_initialize();
+void scanner_initialize(FILE *file);
 void scanner_get();
 
 #endif

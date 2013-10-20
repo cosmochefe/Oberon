@@ -10,19 +10,9 @@
 #define Oberon_parser_h
 
 #include <stdio.h>
-#include <strings.h>
-#include <ctype.h>
+#include <stdbool.h>
 
-#include "types.h"
-#include "errors.h"
-#include "scanner.h"
-#include "symbol_table.h"
-
-//
-// Pré-definições
-//
-
-boolean_t parser_initialize();
-boolean_t parser_run();
+bool parser_initialize(FILE *file);
+bool parser_run();
 
 #endif

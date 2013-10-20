@@ -35,9 +35,9 @@
 		C601FBF3180DCF7000F6557F /* errors.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = errors.c; sourceTree = "<group>"; };
 		C601FC0B1810BBA800F6557F /* symbol_table.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = symbol_table.c; sourceTree = "<group>"; };
 		C601FC0D1810BBBF00F6557F /* symbol_table.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = symbol_table.h; sourceTree = "<group>"; };
+		C649702C181387110032EF6F /* backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = backend.h; sourceTree = "<group>"; };
 		C6603D831809D12C00002BA9 /* scanner.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = scanner.c; sourceTree = "<group>"; };
 		C6603D851809D14200002BA9 /* scanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scanner.h; sourceTree = "<group>"; };
-		C6603D871809D1C200002BA9 /* types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		C6603D881809F7E600002BA9 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
 		C6603D891809F7F600002BA9 /* parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; lineEnding = 0; path = parser.c; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
 		C660BC38180B2BFD00E2F3E1 /* Output.asm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm.asm; path = Output.asm; sourceTree = "<group>"; };
@@ -90,7 +90,7 @@
 		C6D59E8C1808B6B9004BF291 /* Oberon */ = {
 			isa = PBXGroup;
 			children = (
-				C6603D871809D1C200002BA9 /* types.h */,
+				C649702C181387110032EF6F /* backend.h */,
 				C601FBF2180DCF6000F6557F /* errors.h */,
 				C601FBF3180DCF7000F6557F /* errors.c */,
 				C601FC0D1810BBBF00F6557F /* symbol_table.h */,

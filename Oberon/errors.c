@@ -6,12 +6,17 @@
 //  Copyright (c) 2013 Alvaro Costa Neto. All rights reserved.
 //
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
+#include "scanner.h"
 #include "errors.h"
 
 unsigned int errors_count = 0;
 
 // Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
-void errors_mark(const error_t error, const string_t message, ...)
+void errors_mark(const error_t error, const char *message, ...)
 {
 	if (error > error_warning)
 		errors_count++;

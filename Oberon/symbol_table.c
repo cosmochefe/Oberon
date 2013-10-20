@@ -6,18 +6,25 @@
 //  Copyright (c) 2013 Alvaro Costa Neto. All rights reserved.
 //
 
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+#include "backend.h"
+#include "errors.h"
+#include "scanner.h"
 #include "symbol_table.h"
 
 entry_t *symbol_table;
 address_t current_address;
 
-boolean_t symbol_table_initialize(address_t base_address)
+bool symbol_table_initialize(address_t base_address)
 {
 	current_address = base_address;
 	table_clear(&symbol_table);
 	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
-	type_t *base_type = type_create(form_atomic, 0, sizeof(int8_t), NULL, NULL);
+	type_t *base_type = type_create(form_atomic, 0, sizeof(value_t), NULL, NULL);
 	if (!base_type) {
 		errors_mark(error_fatal, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return false;
@@ -33,7 +40,7 @@ boolean_t symbol_table_initialize(address_t base_address)
 	return true;
 }
 
-type_t *type_create(form_t form, value_t length, size_t size, entry_t *fields, type_t *base)
+type_t *type_create(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base)
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
@@ -100,7 +107,7 @@ entry_t *table_find(identifier_t id, entry_t *table)
 	return current;
 }
 
-boolean_t table_append(entry_t *entry, entry_t **ref)
+bool table_append(entry_t *entry, entry_t **ref)
 {
 	if (!ref || !entry)
 		return false;
