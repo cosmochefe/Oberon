@@ -9,9 +9,9 @@
 /* Begin PBXBuildFile section */
 		C601FBF4180DCF7000F6557F /* errors.c in Sources */ = {isa = PBXBuildFile; fileRef = C601FBF3180DCF7000F6557F /* errors.c */; };
 		C601FC0C1810BBA800F6557F /* symbol_table.c in Sources */ = {isa = PBXBuildFile; fileRef = C601FC0B1810BBA800F6557F /* symbol_table.c */; };
+		C649702F18146D8E0032EF6F /* backend.c in Sources */ = {isa = PBXBuildFile; fileRef = C649702E18146D8E0032EF6F /* backend.c */; };
 		C6603D841809D12C00002BA9 /* scanner.c in Sources */ = {isa = PBXBuildFile; fileRef = C6603D831809D12C00002BA9 /* scanner.c */; };
 		C6603D8A1809F7F600002BA9 /* parser.c in Sources */ = {isa = PBXBuildFile; fileRef = C6603D891809F7F600002BA9 /* parser.c */; };
-		C660BC39180B2BFD00E2F3E1 /* Output.asm in Sources */ = {isa = PBXBuildFile; fileRef = C660BC38180B2BFD00E2F3E1 /* Output.asm */; };
 		C6D59E8E1808B6B9004BF291 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = C6D59E8D1808B6B9004BF291 /* main.c */; };
 		C6D59E901808B6B9004BF291 /* Oberon.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = C6D59E8F1808B6B9004BF291 /* Oberon.1 */; };
 /* End PBXBuildFile section */
@@ -36,11 +36,12 @@
 		C601FC0B1810BBA800F6557F /* symbol_table.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = symbol_table.c; sourceTree = "<group>"; };
 		C601FC0D1810BBBF00F6557F /* symbol_table.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = symbol_table.h; sourceTree = "<group>"; };
 		C649702C181387110032EF6F /* backend.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = backend.h; sourceTree = "<group>"; };
+		C649702E18146D8E0032EF6F /* backend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = backend.c; sourceTree = "<group>"; };
 		C6603D831809D12C00002BA9 /* scanner.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = scanner.c; sourceTree = "<group>"; };
 		C6603D851809D14200002BA9 /* scanner.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scanner.h; sourceTree = "<group>"; };
 		C6603D881809F7E600002BA9 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
 		C6603D891809F7F600002BA9 /* parser.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; lineEnding = 0; path = parser.c; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.c; };
-		C660BC38180B2BFD00E2F3E1 /* Output.asm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm.asm; path = Output.asm; sourceTree = "<group>"; };
+		C660BC38180B2BFD00E2F3E1 /* Output.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Output.txt; sourceTree = "<group>"; };
 		C6D59E8A1808B6B9004BF291 /* Oberon */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Oberon; sourceTree = BUILT_PRODUCTS_DIR; };
 		C6D59E8D1808B6B9004BF291 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		C6D59E8F1808B6B9004BF291 /* Oberon.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; lineEnding = 0; path = Oberon.1; sourceTree = "<group>"; };
@@ -64,7 +65,7 @@
 				C601FBF1180B8F8F00F6557F /* README.md */,
 				C6D59E8F1808B6B9004BF291 /* Oberon.1 */,
 				C6D59E961808B90B004BF291 /* Input.txt */,
-				C660BC38180B2BFD00E2F3E1 /* Output.asm */,
+				C660BC38180B2BFD00E2F3E1 /* Output.txt */,
 			);
 			name = Misc;
 			path = Oberon;
@@ -91,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				C649702C181387110032EF6F /* backend.h */,
+				C649702E18146D8E0032EF6F /* backend.c */,
 				C601FBF2180DCF6000F6557F /* errors.h */,
 				C601FBF3180DCF7000F6557F /* errors.c */,
 				C601FC0D1810BBBF00F6557F /* symbol_table.h */,
@@ -155,11 +157,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C6D59E8E1808B6B9004BF291 /* main.c in Sources */,
 				C6603D841809D12C00002BA9 /* scanner.c in Sources */,
 				C6603D8A1809F7F600002BA9 /* parser.c in Sources */,
-				C660BC39180B2BFD00E2F3E1 /* Output.asm in Sources */,
-				C6D59E8E1808B6B9004BF291 /* main.c in Sources */,
 				C601FC0C1810BBA800F6557F /* symbol_table.c in Sources */,
+				C649702F18146D8E0032EF6F /* backend.c in Sources */,
 				C601FBF4180DCF7000F6557F /* errors.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

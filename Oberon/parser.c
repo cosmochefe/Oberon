@@ -59,6 +59,7 @@
 
 #include <stdbool.h>
 
+#include "backend.h"
 #include "errors.h"
 #include "scanner.h"
 #include "symbol_table.h"
@@ -82,29 +83,31 @@ bool parser_assert(symbol_t symbol)
 {
 	if (scanner_token.lexem.symbol == symbol || symbol == symbol_null) {
 		if (parser_should_log)
-			errors_mark(error_log, "\"%s\" found.", scanner_token.lexem.id);
+			errors_mark(error_log, scanner_token.position, "\"%s\" found.", scanner_token.lexem.id);
 		parser_next();
 		return true;
 	}
 	if (symbol == symbol_id)
-		errors_mark(error_parser, "Missing identifier.");
+		errors_mark(error_parser, scanner_token.position, "Missing identifier.");
 	else if (symbol == symbol_number)
-		errors_mark(error_parser, "Missing number.");
+		errors_mark(error_parser, scanner_token.position, "Missing number.");
 	else
-		errors_mark(error_parser, "Missing \"%s\".", id_for_symbol(symbol));
+		errors_mark(error_parser, scanner_token.position, "Missing \"%s\".", id_for_symbol(symbol));
 	return false;
 }
 
 void expr();
 
 // selector = {"." id | "[" expr "]"}
-void selector()
+void selector(entry_t **entry)
 {
 	while (is_first("selector", scanner_token.lexem.symbol)) {
 		if (scanner_token.lexem.symbol == symbol_period) {
 			parser_assert(symbol_period);
+			// FAZER: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
 			parser_assert(symbol_id);
 		} else {
+			// FAZER: Verificar se entry é um vetor
 			parser_assert(symbol_open_bracket);
 			expr();
 			parser_assert(symbol_close_bracket);
@@ -118,10 +121,16 @@ void factor()
 	switch (scanner_token.lexem.symbol) {
 		case symbol_id:
 			parser_assert(symbol_id);
-			selector();
+			entry_t *entry = table_find(scanner_last_token.lexem.id, symbol_table);
+			selector(&entry);
+			if (!entry)
+				errors_mark(error_parser, scanner_last_token.position, "\"%s\" hasn't been declared yet.", scanner_last_token.lexem.id);
+			else
+				backend_load(entry->address);
 			break;
 		case symbol_number:
 			parser_assert(symbol_number);
+			backend_load_immediate(scanner_last_token.value);
 			break;
 		case symbol_open_paren:
 			parser_assert(symbol_open_paren);
@@ -134,7 +143,7 @@ void factor()
 			break;
 		default:
 			// Sincroniza
-			errors_mark(error_parser, "Missing factor.");
+			errors_mark(error_parser, scanner_token.position, "Missing factor.");
 			while (!is_follow("factor", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 				parser_next();
 			break;
@@ -214,10 +223,11 @@ void expr()
 }
 
 // assignment = ":=" expr
-void assignment()
+void assignment(entry_t *entry)
 {
 	parser_assert(symbol_becomes);
 	expr();
+	// FAZER: Adicionar o armazenamento do resultado
 }
 
 // actual_params = "(" [expr {"," expr}] ")"
@@ -282,19 +292,20 @@ void repeat_stmt()
 	expr();
 }
 
-// stmt = [id (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
+// stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 void stmt()
 {
 	if (scanner_token.lexem.symbol == symbol_id) {
 		parser_assert(symbol_id);
-		selector();
+		// FAZER: Adicionar geração de código e obtenção da entrada na tabela de símbolos
+		selector(NULL);
 		if (is_first("assignment", scanner_token.lexem.symbol))
-			assignment();
+			assignment(NULL);
 		else if (is_first("proc_call", scanner_token.lexem.symbol) || is_follow("proc_call", scanner_token.lexem.symbol))
 			proc_call();
 		else {
 			// Sincroniza
-			errors_mark(error_parser, "Invalid statement.");
+			errors_mark(error_parser, scanner_token.position, "Invalid statement.");
 			while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 				parser_next();
 		}
@@ -306,7 +317,7 @@ void stmt()
 		repeat_stmt();
 	// Sincroniza
 	if (!is_follow("stmt", scanner_token.lexem.symbol)) {
-		errors_mark(error_parser, "Missing \";\" or \"end\".");
+		errors_mark(error_parser, scanner_token.position, "Missing \";\" or \"end\".");
 		while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 			parser_next();
 	}
@@ -407,20 +418,20 @@ type_t *type()
 		if (entry)
 			return entry->type;
 		else
-			errors_mark(error_parser, "Unknown type \"%s\".", scanner_last_token.lexem.id);
+			errors_mark(error_parser, scanner_last_token.position, "Unknown type \"%s\".", scanner_last_token.lexem.id);
 	} else if (is_first("array_type", scanner_token.lexem.symbol)) {
 		type_t *new_type = array_type();
 		if (!new_type)
-			errors_mark(error_parser, "Invalid array type.");
+			errors_mark(error_parser, scanner_token.position, "Invalid array type.");
 		return new_type;
 	} else if (is_first("record_type", scanner_token.lexem.symbol)) {
 		type_t *new_type = record_type();
 		if (!new_type)
-			errors_mark(error_parser, "Invalid record type.");
+			errors_mark(error_parser, scanner_token.position, "Invalid record type.");
 		return new_type;
 	}
 	// Sincroniza
-	errors_mark(error_parser, "Missing type.");
+	errors_mark(error_parser, scanner_token.position, "Missing type.");
 	while (!is_follow("type", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 		parser_next();
 	return NULL;
@@ -556,8 +567,7 @@ void var_decl()
 			current_address += e->type->size;
 			e = e->next;
 		}
-		if (new_entries)
-			table_append(new_entries, &symbol_table);
+		table_append(new_entries, &symbol_table);
 		parser_assert(symbol_semicolon);
 	}
 }

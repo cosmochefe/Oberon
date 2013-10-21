@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 
+#include "backend.h"
 #include "parser.h"
 
 //
@@ -15,7 +16,7 @@
 //
 
 const char *input_path  = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Input.txt";
-const char *output_path = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Output.asm";
+const char *output_path = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Output.txt";
 
 //
 // Ponto de entrada do programa
@@ -31,8 +32,10 @@ int main(int argc, const char *argv[])
 	}
 	if (!parser_initialize(input_file))
 		printf("Empty or damaged input file.\n");
-	else
+	else {
+		backend_initialize(output_file);
 		parser_run();
+	}
 	fclose(input_file);
 	fclose(output_file);
 	return 0;

@@ -16,7 +16,7 @@
 unsigned int errors_count = 0;
 
 // Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
-void errors_mark(const error_t error, const char *message, ...)
+void errors_mark(const error_t error, const position_t position, const char *message, ...)
 {
 	if (error > error_warning)
 		errors_count++;
@@ -42,7 +42,7 @@ void errors_mark(const error_t error, const char *message, ...)
 		default:
 			printf("Whaaaaaat?! at "); break;
 	}
-	printf("(%d, %d): ", scanner_token.position.line, scanner_token.position.column);
+	printf("(%d, %d): ", position.line, position.column);
 	va_list args;
 	va_start(args, message);
 	vprintf(message, args);
