@@ -33,7 +33,7 @@ int main(int argc, const char *argv[])
 	if (!parser_initialize(input_file))
 		printf("Empty or damaged input file.\n");
 	else {
-		backend_initialize(output_file);
+		initialize_backend(output_file);
 		parser_run();
 	}
 	fclose(input_file);

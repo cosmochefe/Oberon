@@ -26,12 +26,12 @@ bool symbol_table_initialize(address_t base_address)
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
 	type_t *base_type = type_create(form_atomic, 0, sizeof(value_t), NULL, NULL);
 	if (!base_type) {
-		errors_mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return false;
 	}
 	entry_t *type = entry_create("integer", position_zero, class_type);
 	if (!type) {
-		errors_mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		free(base_type);
 		return false;
 	}
@@ -44,7 +44,7 @@ type_t *type_create(form_t form, value_t length, unsigned int size, entry_t *fie
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
-		errors_mark(error_fatal, scanner_last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark(error_fatal, scanner_last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return NULL;
 	}
 	type->form = form;
@@ -59,7 +59,7 @@ entry_t *entry_create(identifier_t id, position_t position, class_t class)
 {
 	entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
 	if (!new_entry) {
-		errors_mark(error_fatal, position, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark(error_fatal, position, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return NULL;
 	}
 	strcpy(new_entry->id, id);
@@ -91,7 +91,7 @@ void table_clear(entry_t **ref)
 void table_log(entry_t *table)
 {
 	while (table) {
-		errors_mark(error_log, position_zero, "Entry \"%s\" found.", table->id);
+		mark(error_log, position_zero, "Entry \"%s\" found.", table->id);
 		table = table->next;
 	}
 }
@@ -115,7 +115,7 @@ bool table_append(entry_t *entry, entry_t **ref)
 	entry_t *e = entry;
 	while (e) {
 		if (table_find(e->id, table))
-			errors_mark(error_parser, e->position, "The identifier \"%s\" has already been declared.", e->id);
+			mark(error_parser, e->position, "The identifier \"%s\" has already been declared.", e->id);
 		e = e->next;
 	}
 	if (!table)

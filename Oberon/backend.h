@@ -15,10 +15,10 @@
 typedef unsigned char value_t;
 typedef unsigned short address_t;
 
-void backend_initialize(FILE *file);
+void initialize_backend(FILE *file);
 
-void backend_load(address_t address);
-void backend_load_immediate(value_t value);
-void backend_store(address_t address);
+void load(address_t address);
+void load_immediate(value_t value);
+void store(address_t address);
 
 #endif

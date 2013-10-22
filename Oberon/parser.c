@@ -83,16 +83,16 @@ bool parser_assert(symbol_t symbol)
 {
 	if (scanner_token.lexem.symbol == symbol || symbol == symbol_null) {
 		if (parser_should_log)
-			errors_mark(error_log, scanner_token.position, "\"%s\" found.", scanner_token.lexem.id);
+			mark(error_log, scanner_token.position, "\"%s\" found.", scanner_token.lexem.id);
 		parser_next();
 		return true;
 	}
 	if (symbol == symbol_id)
-		errors_mark(error_parser, scanner_token.position, "Missing identifier.");
+		mark(error_parser, scanner_token.position, "Missing identifier.");
 	else if (symbol == symbol_number)
-		errors_mark(error_parser, scanner_token.position, "Missing number.");
+		mark(error_parser, scanner_token.position, "Missing number.");
 	else
-		errors_mark(error_parser, scanner_token.position, "Missing \"%s\".", id_for_symbol(symbol));
+		mark(error_parser, scanner_token.position, "Missing \"%s\".", id_for_symbol(symbol));
 	return false;
 }
 
@@ -124,13 +124,13 @@ void factor()
 			entry_t *entry = table_find(scanner_last_token.lexem.id, symbol_table);
 			selector(&entry);
 			if (!entry)
-				errors_mark(error_parser, scanner_last_token.position, "\"%s\" hasn't been declared yet.", scanner_last_token.lexem.id);
+				mark(error_parser, scanner_last_token.position, "\"%s\" hasn't been declared yet.", scanner_last_token.lexem.id);
 			else
-				backend_load(entry->address);
+				load(entry->address);
 			break;
 		case symbol_number:
 			parser_assert(symbol_number);
-			backend_load_immediate(scanner_last_token.value);
+			load_immediate(scanner_last_token.value);
 			break;
 		case symbol_open_paren:
 			parser_assert(symbol_open_paren);
@@ -143,7 +143,7 @@ void factor()
 			break;
 		default:
 			// Sincroniza
-			errors_mark(error_parser, scanner_token.position, "Missing factor.");
+			mark(error_parser, scanner_token.position, "Missing factor.");
 			while (!is_follow("factor", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 				parser_next();
 			break;
@@ -305,7 +305,7 @@ void stmt()
 			proc_call();
 		else {
 			// Sincroniza
-			errors_mark(error_parser, scanner_token.position, "Invalid statement.");
+			mark(error_parser, scanner_token.position, "Invalid statement.");
 			while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 				parser_next();
 		}
@@ -317,7 +317,7 @@ void stmt()
 		repeat_stmt();
 	// Sincroniza
 	if (!is_follow("stmt", scanner_token.lexem.symbol)) {
-		errors_mark(error_parser, scanner_token.position, "Missing \";\" or \"end\".");
+		mark(error_parser, scanner_token.position, "Missing \";\" or \"end\".");
 		while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 			parser_next();
 	}
@@ -418,20 +418,20 @@ type_t *type()
 		if (entry)
 			return entry->type;
 		else
-			errors_mark(error_parser, scanner_last_token.position, "Unknown type \"%s\".", scanner_last_token.lexem.id);
+			mark(error_parser, scanner_last_token.position, "Unknown type \"%s\".", scanner_last_token.lexem.id);
 	} else if (is_first("array_type", scanner_token.lexem.symbol)) {
 		type_t *new_type = array_type();
 		if (!new_type)
-			errors_mark(error_parser, scanner_token.position, "Invalid array type.");
+			mark(error_parser, scanner_token.position, "Invalid array type.");
 		return new_type;
 	} else if (is_first("record_type", scanner_token.lexem.symbol)) {
 		type_t *new_type = record_type();
 		if (!new_type)
-			errors_mark(error_parser, scanner_token.position, "Invalid record type.");
+			mark(error_parser, scanner_token.position, "Invalid record type.");
 		return new_type;
 	}
 	// Sincroniza
-	errors_mark(error_parser, scanner_token.position, "Missing type.");
+	mark(error_parser, scanner_token.position, "Missing type.");
 	while (!is_follow("type", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
 		parser_next();
 	return NULL;

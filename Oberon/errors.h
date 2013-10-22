@@ -11,8 +11,6 @@
 
 #include "scanner.h"
 
-#define ERRORS_BAD_CODE_TOLERANCE 50
-
 typedef enum _error {
 	error_log,
 	error_info,
@@ -24,6 +22,6 @@ typedef enum _error {
 	error_unknown
 } error_t;
 
-void errors_mark(const error_t error, const position_t position, const char *message, ...);
+void mark(const error_t error, const position_t position, const char *message, ...);
 
 #endif

@@ -13,10 +13,13 @@
 #include "scanner.h"
 #include "errors.h"
 
+
+#define ERRORS_BAD_CODE_TOLERANCE 50
+
 unsigned int errors_count = 0;
 
 // Esta função aponta que um erro aconteceu usando a mensagem de parâmetro e a posição atual no arquivo
-void errors_mark(const error_t error, const position_t position, const char *message, ...)
+void mark(const error_t error, const position_t position, const char *message, ...)
 {
 	if (error > error_warning)
 		errors_count++;

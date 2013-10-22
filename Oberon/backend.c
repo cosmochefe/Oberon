@@ -15,35 +15,35 @@
 
 FILE *output_file;
 
-const unsigned char register_index_max = 31;
+#define REGISTER_INDEX_MAX 31
 unsigned char register_index = 0;
 
-void backend_initialize(FILE *file)
+void initialize_backend(FILE *file)
 {
 	output_file = file;
 }
 
-void backend_load(address_t address)
+void load(address_t address)
 {
 	fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, address);
 	register_index++;
-	if (register_index > register_index_max) {
-		errors_mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+	if (register_index > REGISTER_INDEX_MAX) {
+		mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }
 
-void backend_load_immediate(value_t value)
+void load_immediate(value_t value)
 {
 	fprintf(output_file, "\tLOAD R%d, %d\n", register_index, value);
 	register_index++;
-	if (register_index > register_index_max) {
-		errors_mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+	if (register_index > REGISTER_INDEX_MAX) {
+		mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }
 
-void backend_store(address_t address)
+void store(address_t address)
 {
 	
 }

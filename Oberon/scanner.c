@@ -536,7 +536,7 @@ void integer()
 			break;
 	}
 	if (invalid_ending)
-		errors_mark(error_warning, scanner_token.position, "\"%s\" is not a number. Assuming \"%s\".", id, scanner_token.lexem.id);
+		mark(error_warning, scanner_token.position, "\"%s\" is not a number. Assuming \"%s\".", id, scanner_token.lexem.id);
 }
 
 // Por definição, somente números positivos inteiros são reconhecidos
@@ -562,7 +562,7 @@ void comment()
 		}
 		previous_char = scanner_char;
 	}
-	errors_mark(error_fatal, scanner_token.position, "Endless comment detected.");
+	mark(error_fatal, scanner_token.position, "Endless comment detected.");
 	scanner_token.lexem.symbol = symbol_eof;
 }
 
@@ -611,7 +611,7 @@ void scanner_get()
 	scanner_token.lexem.id[1] = '\0';
 	scanner_step();
 	if (scanner_token.lexem.symbol == symbol_null) {
-		errors_mark(error_scanner, scanner_token.position, "\"%s\" is not a valid symbol.", scanner_token.lexem.id);
+		mark(error_scanner, scanner_token.position, "\"%s\" is not a valid symbol.", scanner_token.lexem.id);
 		return;
 	}
 	// Os casos abaixo representam os lexemas com mais de um caracter (como “>=”, “:=” etc.)
