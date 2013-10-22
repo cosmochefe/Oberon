@@ -26,12 +26,12 @@ bool initialize_table(address_t base_address, entry_t **ref)
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
 	type_t *base_type = create_type(form_atomic, 0, sizeof(value_t), NULL, NULL);
 	if (!base_type) {
-		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark_at(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return false;
 	}
 	entry_t *type = create_entry("integer", position_zero, class_type);
 	if (!type) {
-		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark_at(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		free(base_type);
 		return false;
 	}
@@ -44,7 +44,7 @@ type_t *create_type(form_t form, value_t length, unsigned int size, entry_t *fie
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
-		mark(error_fatal, last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark_at(error_fatal, last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return NULL;
 	}
 	type->form = form;
@@ -59,7 +59,7 @@ entry_t *create_entry(identifier_t id, position_t position, class_t class)
 {
 	entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
 	if (!new_entry) {
-		mark(error_fatal, position, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark_at(error_fatal, position, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return NULL;
 	}
 	strcpy(new_entry->id, id);
@@ -91,7 +91,7 @@ void clear_table(entry_t **ref)
 void log_table(entry_t *table)
 {
 	while (table) {
-		mark(error_log, position_zero, "Entry \"%s\" found.", table->id);
+		mark_at(error_log, position_zero, "Entry \"%s\" found.", table->id);
 		table = table->next;
 	}
 }
@@ -115,7 +115,7 @@ bool append_entry(entry_t *entry, entry_t **ref)
 	entry_t *e = entry;
 	while (e) {
 		if (find_entry(e->id, table))
-			mark(error_parser, e->position, "The identifier \"%s\" has already been declared.", e->id);
+			mark_at(error_parser, e->position, "The identifier \"%s\" has already been declared.", e->id);
 		e = e->next;
 	}
 	if (!table)

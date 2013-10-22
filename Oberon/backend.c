@@ -16,6 +16,7 @@
 FILE *output_file;
 
 #define REGISTER_INDEX_MAX 31
+
 unsigned char register_index = 0;
 
 void initialize_backend(FILE *file)
@@ -28,7 +29,7 @@ void load(address_t address)
 	fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, address);
 	register_index++;
 	if (register_index > REGISTER_INDEX_MAX) {
-		mark(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+		mark_at(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -38,7 +39,7 @@ void load_immediate(value_t value)
 	fprintf(output_file, "\tLOAD R%d, %d\n", register_index, value);
 	register_index++;
 	if (register_index > REGISTER_INDEX_MAX) {
-		mark(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+		mark_at(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }
