@@ -357,9 +357,10 @@ entry_t *id_list()
 	scan();
 	while (current_token.lexem.symbol == symbol_comma) {
 		recognize(symbol_comma);
-		if (verify(symbol_id))
+		if (verify(symbol_id)) {
 			append_entry(create_entry(current_token.lexem.id, current_token.position, class_var), &new_entries);
-		scan();
+			scan();
+		}
 	}
 	return new_entries;
 }
@@ -374,9 +375,10 @@ type_t *array_type()
 	new_type = create_type(form_array, 0, 0, NULL, NULL);
 	//	expr();
 	value_t length = 0;
-	if (verify(symbol_number))
+	if (verify(symbol_number)) {
 		length = current_token.value;
-	scan();
+		scan();
+	}
 	recognize(symbol_of);
 	type_t *base_type = type();
 	unsigned int size = 0;
@@ -561,12 +563,13 @@ void const_decl()
 		scan();
 		recognize(symbol_equal);
 		// expr();
-		verify(symbol_number);
-		if (new_entry) {
-			new_entry->value = current_token.value;
-			append_entry(new_entry, &symbol_table);
+		if (verify(symbol_number)) {
+			if (new_entry) {
+				new_entry->value = current_token.value;
+				append_entry(new_entry, &symbol_table);
+			}
+			scan();
 		}
-		scan();
 		recognize(symbol_semicolon);
 	}
 }
