@@ -131,17 +131,22 @@ void factor()
 {
 	switch (current_token.lexem.symbol) {
 		case symbol_id:
-			recognize(symbol_id);
-			entry_t *entry = find_entry(last_token.lexem.id, symbol_table);
-			selector(&entry);
-			if (!entry)
-				mark_at(error_parser, last_token.position, "\"%s\" hasn't been declared yet.", last_token.lexem.id);
-			else
+			verify(symbol_id);
+			entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
+			if (!entry) {
+				mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
+				scan();
+			}
+			else {
+				scan();
+				selector(&entry);
 				load(entry->address);
+			}
 			break;
 		case symbol_number:
-			recognize(symbol_number);
-			load_immediate(last_token.value);
+			verify(symbol_number);
+			load_immediate(current_token.value);
+			scan();
 			break;
 		case symbol_open_paren:
 			recognize(symbol_open_paren);
@@ -347,12 +352,14 @@ void stmt_sequence()
 // id_list = id {"," id}
 entry_t *id_list()
 {
-	recognize(symbol_id);
-	entry_t *new_entries = create_entry(last_token.lexem.id, last_token.position, class_var);
+	verify(symbol_id);
+	entry_t *new_entries = create_entry(current_token.lexem.id, current_token.position, class_var);
+	scan();
 	while (current_token.lexem.symbol == symbol_comma) {
 		recognize(symbol_comma);
-		if (recognize(symbol_id))
-			append_entry(create_entry(last_token.lexem.id, last_token.position, class_var), &new_entries);
+		if (verify(symbol_id))
+			append_entry(create_entry(current_token.lexem.id, current_token.position, class_var), &new_entries);
+		scan();
 	}
 	return new_entries;
 }
@@ -362,17 +369,25 @@ type_t *type();
 // array_type = "array" expr "of" type
 type_t *array_type()
 {
+	type_t *new_type = NULL;
 	recognize(symbol_array);
+	new_type = create_type(form_array, 0, 0, NULL, NULL);
 	//	expr();
 	value_t length = 0;
-	if (recognize(symbol_number))
-		length = last_token.value;
+	if (verify(symbol_number))
+		length = current_token.value;
+	scan();
 	recognize(symbol_of);
-	type_t *base = type();
+	type_t *base_type = type();
 	unsigned int size = 0;
-	if (base)
-		size = length * base->size;
-	return create_type(form_array, length, size, NULL, base);
+	if (base_type)
+		size = length * base_type->size;
+	if (new_type) {
+		new_type->length = length;
+		new_type->size = size;
+		new_type->base = base_type;
+	}
+	return new_type;
 }
 
 // field_list = [id_list ":" type]
@@ -395,7 +410,9 @@ entry_t *field_list()
 // record_type = "record" field_list {";" field_list} "end"
 type_t *record_type()
 {
+	type_t *new_type = NULL;
 	recognize(symbol_record);
+	new_type = create_type(form_record, 0, 0, NULL, NULL);
 	entry_t *fields = field_list();
 	while (current_token.lexem.symbol == symbol_semicolon) {
 		recognize(symbol_semicolon);
@@ -416,7 +433,11 @@ type_t *record_type()
 		}
 	}
 	recognize(symbol_end);
-	return create_type(form_record, 0, size, fields, NULL);
+	if (new_type) {
+		new_type->size = size;
+		new_type->fields = fields;
+	}
+	return new_type;
 }
 
 // type = id | array_type | record_type
@@ -424,12 +445,15 @@ type_t *type()
 {
 	if (current_token.lexem.symbol == symbol_id) {
 		// Qualquer tipo atômico deve ser baseado em um dos tipos internos da linguagem (neste caso apenas “integer”)
-		recognize(symbol_id);
-		entry_t *entry = find_entry(last_token.lexem.id, symbol_table);
-		if (entry)
+		verify(symbol_id);
+		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
+		if (entry) {
+			scan();
 			return entry->type;
+		}
 		else
-			mark_at(error_parser, last_token.position, "Unknown type \"%s\".", last_token.lexem.id);
+			mark_at(error_parser, current_token.position, "Unknown type \"%s\".", current_token.lexem.id);
+		scan();
 	} else if (is_first("array_type", current_token.lexem.symbol)) {
 		type_t *new_type = array_type();
 		if (!new_type)
@@ -532,15 +556,17 @@ void const_decl()
 {
 	recognize(symbol_const);
 	while (current_token.lexem.symbol == symbol_id) {
-		recognize(symbol_id);
-		entry_t *new_entry = create_entry(last_token.lexem.id, last_token.position, class_const);
+		verify(symbol_id);
+		entry_t *new_entry = create_entry(current_token.lexem.id, current_token.position, class_const);
+		scan();
 		recognize(symbol_equal);
 		// expr();
-		recognize(symbol_number);
+		verify(symbol_number);
 		if (new_entry) {
-			new_entry->value = last_token.value;
+			new_entry->value = current_token.value;
 			append_entry(new_entry, &symbol_table);
 		}
+		scan();
 		recognize(symbol_semicolon);
 	}
 }
@@ -550,8 +576,9 @@ void type_decl()
 {
 	recognize(symbol_type);
 	while (current_token.lexem.symbol == symbol_id) {
-		recognize(symbol_id);
-		entry_t *new_entry = create_entry(last_token.lexem.id, last_token.position, class_type);
+		verify(symbol_id);
+		entry_t *new_entry = create_entry(current_token.lexem.id, current_token.position, class_type);
+		scan();
 		// FAZER: Melhorar erro para o “igual”
 		recognize(symbol_equal);
 		type_t *base = type();

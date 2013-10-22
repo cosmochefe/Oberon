@@ -64,11 +64,12 @@
 #include "errors.h"
 #include "scanner.h"
 
+FILE *input_file;
+
 // Variávies e constantes globais
 token_t current_token, last_token;
 const position_t position_zero = { .line = 0, .column = 0, .index = 0 };
 
-FILE *input_file;
 char current_char, last_char;
 position_t current_position;
 
