@@ -18,29 +18,29 @@
 entry_t *symbol_table;
 address_t current_address;
 
-bool symbol_table_initialize(address_t base_address)
+bool initialize_table(address_t base_address, entry_t **ref)
 {
 	current_address = base_address;
-	table_clear(&symbol_table);
+	clear_table(ref);
 	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
-	type_t *base_type = type_create(form_atomic, 0, sizeof(value_t), NULL, NULL);
+	type_t *base_type = create_type(form_atomic, 0, sizeof(value_t), NULL, NULL);
 	if (!base_type) {
 		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return false;
 	}
-	entry_t *type = entry_create("integer", position_zero, class_type);
+	entry_t *type = create_entry("integer", position_zero, class_type);
 	if (!type) {
 		mark(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 		free(base_type);
 		return false;
 	}
 	type->type = base_type;
-	table_append(type, &symbol_table);
+	append_entry(type, ref);
 	return true;
 }
 
-type_t *type_create(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base)
+type_t *create_type(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base)
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
@@ -55,7 +55,7 @@ type_t *type_create(form_t form, value_t length, unsigned int size, entry_t *fie
 	return type;
 }
 
-entry_t *entry_create(identifier_t id, position_t position, class_t class)
+entry_t *create_entry(identifier_t id, position_t position, class_t class)
 {
 	entry_t *new_entry = (entry_t *)malloc(sizeof(entry_t));
 	if (!new_entry) {
@@ -72,7 +72,7 @@ entry_t *entry_create(identifier_t id, position_t position, class_t class)
 	return new_entry;
 }
 
-void table_clear(entry_t **ref)
+void clear_table(entry_t **ref)
 {
 	// FAZER: Verificar quais tipos de entradas na tabela devem ser removidos primeiro
 	// Pode haver um problema ao liberar a memória para um “type” e este ainda ter referências para si
@@ -82,13 +82,13 @@ void table_clear(entry_t **ref)
 		entry_t *current = table;
 		table = current->next;
 		if (current->type && current->type->fields)
-			table_clear(&current->type->fields);
+			clear_table(&current->type->fields);
 		free(current);
 	}
 	*ref = NULL;
 }
 
-void table_log(entry_t *table)
+void log_table(entry_t *table)
 {
 	while (table) {
 		mark(error_log, position_zero, "Entry \"%s\" found.", table->id);
@@ -96,7 +96,7 @@ void table_log(entry_t *table)
 	}
 }
 
-entry_t *table_find(identifier_t id, entry_t *table)
+entry_t *find_entry(identifier_t id, entry_t *table)
 {
 	entry_t *current = table;
 	while (current) {
@@ -107,14 +107,14 @@ entry_t *table_find(identifier_t id, entry_t *table)
 	return current;
 }
 
-bool table_append(entry_t *entry, entry_t **ref)
+bool append_entry(entry_t *entry, entry_t **ref)
 {
 	if (!ref || !entry)
 		return false;
 	entry_t *table = *ref;
 	entry_t *e = entry;
 	while (e) {
-		if (table_find(e->id, table))
+		if (find_entry(e->id, table))
 			mark(error_parser, e->position, "The identifier \"%s\" has already been declared.", e->id);
 		e = e->next;
 	}

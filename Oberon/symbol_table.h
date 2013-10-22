@@ -52,14 +52,13 @@ typedef struct _entry {
 extern entry_t *symbol_table;
 extern address_t current_address;
 
-bool symbol_table_initialize(address_t base_address);
+type_t *create_type(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base);
+entry_t *create_entry(identifier_t id, position_t position, class_t class);
 
-type_t *type_create(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base);
-entry_t *entry_create(identifier_t id, position_t position, class_t class);
-
-void table_clear(entry_t **ref);
-void table_log(entry_t *table);
-entry_t *table_find(identifier_t id, entry_t *table);
-bool table_append(entry_t *entry, entry_t **ref);
+bool initialize_table(address_t base_address, entry_t **ref);
+void clear_table(entry_t **ref);
+void log_table(entry_t *table);
+entry_t *find_entry(identifier_t id, entry_t *table);
+bool append_entry(entry_t *entry, entry_t **ref);
 
 #endif

@@ -121,7 +121,7 @@ void factor()
 	switch (scanner_token.lexem.symbol) {
 		case symbol_id:
 			parser_assert(symbol_id);
-			entry_t *entry = table_find(scanner_last_token.lexem.id, symbol_table);
+			entry_t *entry = find_entry(scanner_last_token.lexem.id, symbol_table);
 			selector(&entry);
 			if (!entry)
 				mark(error_parser, scanner_last_token.position, "\"%s\" hasn't been declared yet.", scanner_last_token.lexem.id);
@@ -337,11 +337,11 @@ void stmt_sequence()
 entry_t *id_list()
 {
 	parser_assert(symbol_id);
-	entry_t *new_entries = entry_create(scanner_last_token.lexem.id, scanner_last_token.position, class_var);
+	entry_t *new_entries = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_var);
 	while (scanner_token.lexem.symbol == symbol_comma) {
 		parser_assert(symbol_comma);
 		if (parser_assert(symbol_id))
-			table_append(entry_create(scanner_last_token.lexem.id, scanner_last_token.position, class_var), &new_entries);
+			append_entry(create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_var), &new_entries);
 	}
 	return new_entries;
 }
@@ -361,7 +361,7 @@ type_t *array_type()
 	unsigned int size = 0;
 	if (base)
 		size = length * base->size;
-	return type_create(form_array, length, size, NULL, base);
+	return create_type(form_array, length, size, NULL, base);
 }
 
 // field_list = [id_list ":" type]
@@ -390,7 +390,7 @@ type_t *record_type()
 		parser_assert(symbol_semicolon);
 		entry_t *more_fields = field_list();
 		if (fields && more_fields)
-			table_append(more_fields, &fields);
+			append_entry(more_fields, &fields);
 	}
 	// Efetua o cálculo do tamanho do tipo registro e dos deslocamentos de cada campo
 	unsigned int size = 0;
@@ -405,7 +405,7 @@ type_t *record_type()
 		}
 	}
 	parser_assert(symbol_end);
-	return type_create(form_record, 0, size, fields, NULL);
+	return create_type(form_record, 0, size, fields, NULL);
 }
 
 // type = id | array_type | record_type
@@ -414,7 +414,7 @@ type_t *type()
 	if (scanner_token.lexem.symbol == symbol_id) {
 		// Qualquer tipo atômico deve ser baseado em um dos tipos internos da linguagem (neste caso apenas “integer”)
 		parser_assert(symbol_id);
-		entry_t *entry = table_find(scanner_last_token.lexem.id, symbol_table);
+		entry_t *entry = find_entry(scanner_last_token.lexem.id, symbol_table);
 		if (entry)
 			return entry->type;
 		else
@@ -462,7 +462,7 @@ entry_t *formal_params()
 		params = formal_params_section();
 		while (scanner_token.lexem.symbol == symbol_semicolon) {
 			parser_assert(symbol_semicolon);
-			table_append(formal_params_section(), &params);
+			append_entry(formal_params_section(), &params);
 		}
 	}
 	parser_assert(symbol_close_paren);
@@ -522,13 +522,13 @@ void const_decl()
 	parser_assert(symbol_const);
 	while (scanner_token.lexem.symbol == symbol_id) {
 		parser_assert(symbol_id);
-		entry_t *new_entry = entry_create(scanner_last_token.lexem.id, scanner_last_token.position, class_const);
+		entry_t *new_entry = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_const);
 		parser_assert(symbol_equal);
 		// expr();
 		parser_assert(symbol_number);
 		if (new_entry) {
 			new_entry->value = scanner_last_token.value;
-			table_append(new_entry, &symbol_table);
+			append_entry(new_entry, &symbol_table);
 		}
 		parser_assert(symbol_semicolon);
 	}
@@ -540,13 +540,13 @@ void type_decl()
 	parser_assert(symbol_type);
 	while (scanner_token.lexem.symbol == symbol_id) {
 		parser_assert(symbol_id);
-		entry_t *new_entry = entry_create(scanner_last_token.lexem.id, scanner_last_token.position, class_type);
+		entry_t *new_entry = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_type);
 		// FAZER: Melhorar erro para o “igual”
 		parser_assert(symbol_equal);
 		type_t *base = type();
 		if (new_entry && base) {
 			new_entry->type = base;
-			table_append(new_entry, &symbol_table);
+			append_entry(new_entry, &symbol_table);
 		}
 		parser_assert(symbol_semicolon);
 	}
@@ -567,7 +567,7 @@ void var_decl()
 			current_address += e->type->size;
 			e = e->next;
 		}
-		table_append(new_entries, &symbol_table);
+		append_entry(new_entries, &symbol_table);
 		parser_assert(symbol_semicolon);
 	}
 }
@@ -608,7 +608,7 @@ void module()
 bool parser_initialize(FILE *file)
 {
 	parser_should_log = false;
-	if (!symbol_table_initialize(0))
+	if (!initialize_table(0, &symbol_table))
 		return false;
 	scanner_initialize(file);
 	scanner_get();
@@ -618,6 +618,6 @@ bool parser_initialize(FILE *file)
 bool parser_run()
 {
 	module();
-	table_clear(&symbol_table);
+	clear_table(&symbol_table);
 	return true;
 }
