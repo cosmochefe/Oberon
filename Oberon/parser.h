@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-bool parser_initialize(FILE *file);
-bool parser_run();
+bool initialize_parser(FILE *file);
+bool parse();
 
 #endif

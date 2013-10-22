@@ -44,7 +44,7 @@ type_t *create_type(form_t form, value_t length, unsigned int size, entry_t *fie
 {
 	type_t *type = (type_t *)malloc(sizeof(type_t));
 	if (!type) {
-		mark(error_fatal, scanner_last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
+		mark(error_fatal, last_token.position, "Not enough memory. By the way, who are you and what the hell is 42?");
 		return NULL;
 	}
 	type->form = form;

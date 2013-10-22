@@ -66,33 +66,33 @@
 #include "parser.h"
 
 // Registro de ocorrências
-bool parser_should_log;
+bool should_log;
 
-bool parser_next()
+bool scan()
 {
-	if (scanner_token.lexem.symbol == symbol_eof)
+	if (current_token.lexem.symbol == symbol_eof)
 		return false;
 	do {
-		scanner_get();
-	} while (scanner_token.lexem.symbol == symbol_null);
-	return scanner_token.lexem.symbol == symbol_eof;
+		read_token();
+	} while (current_token.lexem.symbol == symbol_null);
+	return current_token.lexem.symbol == symbol_eof;
 }
 
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
-bool parser_assert(symbol_t symbol)
+bool assert(symbol_t symbol)
 {
-	if (scanner_token.lexem.symbol == symbol || symbol == symbol_null) {
-		if (parser_should_log)
-			mark(error_log, scanner_token.position, "\"%s\" found.", scanner_token.lexem.id);
-		parser_next();
+	if (current_token.lexem.symbol == symbol || symbol == symbol_null) {
+		if (should_log)
+			mark(error_log, current_token.position, "\"%s\" found.", current_token.lexem.id);
+		scan();
 		return true;
 	}
 	if (symbol == symbol_id)
-		mark(error_parser, scanner_token.position, "Missing identifier.");
+		mark(error_parser, current_token.position, "Missing identifier.");
 	else if (symbol == symbol_number)
-		mark(error_parser, scanner_token.position, "Missing number.");
+		mark(error_parser, current_token.position, "Missing number.");
 	else
-		mark(error_parser, scanner_token.position, "Missing \"%s\".", id_for_symbol(symbol));
+		mark(error_parser, current_token.position, "Missing \"%s\".", id_for_symbol(symbol));
 	return false;
 }
 
@@ -101,16 +101,16 @@ void expr();
 // selector = {"." id | "[" expr "]"}
 void selector(entry_t **entry)
 {
-	while (is_first("selector", scanner_token.lexem.symbol)) {
-		if (scanner_token.lexem.symbol == symbol_period) {
-			parser_assert(symbol_period);
+	while (is_first("selector", current_token.lexem.symbol)) {
+		if (current_token.lexem.symbol == symbol_period) {
+			assert(symbol_period);
 			// FAZER: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
-			parser_assert(symbol_id);
+			assert(symbol_id);
 		} else {
 			// FAZER: Verificar se entry é um vetor
-			parser_assert(symbol_open_bracket);
+			assert(symbol_open_bracket);
 			expr();
-			parser_assert(symbol_close_bracket);
+			assert(symbol_close_bracket);
 		}
 	}
 }
@@ -118,34 +118,34 @@ void selector(entry_t **entry)
 // factor = id selector | number | "(" expr ")" | "~" factor
 void factor()
 {
-	switch (scanner_token.lexem.symbol) {
+	switch (current_token.lexem.symbol) {
 		case symbol_id:
-			parser_assert(symbol_id);
-			entry_t *entry = find_entry(scanner_last_token.lexem.id, symbol_table);
+			assert(symbol_id);
+			entry_t *entry = find_entry(last_token.lexem.id, symbol_table);
 			selector(&entry);
 			if (!entry)
-				mark(error_parser, scanner_last_token.position, "\"%s\" hasn't been declared yet.", scanner_last_token.lexem.id);
+				mark(error_parser, last_token.position, "\"%s\" hasn't been declared yet.", last_token.lexem.id);
 			else
 				load(entry->address);
 			break;
 		case symbol_number:
-			parser_assert(symbol_number);
-			load_immediate(scanner_last_token.value);
+			assert(symbol_number);
+			load_immediate(last_token.value);
 			break;
 		case symbol_open_paren:
-			parser_assert(symbol_open_paren);
+			assert(symbol_open_paren);
 			expr();
-			parser_assert(symbol_close_paren);
+			assert(symbol_close_paren);
 			break;
 		case symbol_not:
-			parser_assert(symbol_not);
+			assert(symbol_not);
 			factor();
 			break;
 		default:
 			// Sincroniza
-			mark(error_parser, scanner_token.position, "Missing factor.");
-			while (!is_follow("factor", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
-				parser_next();
+			mark(error_parser, current_token.position, "Missing factor.");
+			while (!is_follow("factor", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+				scan();
 			break;
 	}
 }
@@ -154,8 +154,8 @@ void factor()
 void term()
 {
 	factor();
-	while (scanner_token.lexem.symbol >= symbol_times && scanner_token.lexem.symbol <= symbol_and) {
-		switch (scanner_token.lexem.symbol) {
+	while (current_token.lexem.symbol >= symbol_times && current_token.lexem.symbol <= symbol_and) {
+		switch (current_token.lexem.symbol) {
 			case symbol_times:
 				break;
 			case symbol_div:
@@ -167,7 +167,7 @@ void term()
 			default:
 				break;
 		}
-		parser_assert(scanner_token.lexem.symbol); 
+		assert(current_token.lexem.symbol); 
 		factor();
 	}
 }
@@ -175,13 +175,13 @@ void term()
 // simple_expr = ["+" | "-"] term {("+" | "-" | "OR") term}
 void simple_expr()
 {
-	if (scanner_token.lexem.symbol == symbol_plus)
-		parser_assert(symbol_plus);
-	else if (scanner_token.lexem.symbol == symbol_minus)
-		parser_assert(symbol_minus);
+	if (current_token.lexem.symbol == symbol_plus)
+		assert(symbol_plus);
+	else if (current_token.lexem.symbol == symbol_minus)
+		assert(symbol_minus);
 	term();
-	while (scanner_token.lexem.symbol >= symbol_plus && scanner_token.lexem.symbol <= symbol_or) {
-		switch (scanner_token.lexem.symbol) {
+	while (current_token.lexem.symbol >= symbol_plus && current_token.lexem.symbol <= symbol_or) {
+		switch (current_token.lexem.symbol) {
 			case symbol_plus:
 				break;
 			case symbol_minus:
@@ -191,7 +191,7 @@ void simple_expr()
 			default:
 				break;
 		}
-		parser_assert(scanner_token.lexem.symbol); 
+		assert(current_token.lexem.symbol); 
 		term();
 	}
 }
@@ -200,8 +200,8 @@ void simple_expr()
 void expr()
 {
 	simple_expr();
-	if (scanner_token.lexem.symbol >= symbol_equal && scanner_token.lexem.symbol <= symbol_greater) {
-		switch (scanner_token.lexem.symbol) {
+	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater) {
+		switch (current_token.lexem.symbol) {
 			case symbol_equal:
 				break;
 			case symbol_not_equal:
@@ -217,7 +217,7 @@ void expr()
 			default:
 				break;
 		}
-		parser_assert(scanner_token.lexem.symbol);
+		assert(current_token.lexem.symbol);
 		simple_expr();
 	}
 }
@@ -225,7 +225,7 @@ void expr()
 // assignment = ":=" expr
 void assignment(entry_t *entry)
 {
-	parser_assert(symbol_becomes);
+	assert(symbol_becomes);
 	expr();
 	// FAZER: Adicionar o armazenamento do resultado
 }
@@ -233,21 +233,21 @@ void assignment(entry_t *entry)
 // actual_params = "(" [expr {"," expr}] ")"
 void actual_params()
 {
-	parser_assert(symbol_open_paren);
-	if (is_first("expr", scanner_token.lexem.symbol)) {
+	assert(symbol_open_paren);
+	if (is_first("expr", current_token.lexem.symbol)) {
 		expr();
-		while (scanner_token.lexem.symbol == symbol_comma) {
-			parser_assert(symbol_comma);
+		while (current_token.lexem.symbol == symbol_comma) {
+			assert(symbol_comma);
 			expr();
 		}
 	}
-	parser_assert(symbol_close_paren);
+	assert(symbol_close_paren);
 }
 
 // proc_call = [actual_params]
 void proc_call()
 {
-	if (is_first("actual_params", scanner_token.lexem.symbol))
+	if (is_first("actual_params", current_token.lexem.symbol))
 		actual_params();
 }
 
@@ -256,70 +256,70 @@ void stmt_sequence();
 // if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 void if_stmt()
 {
-	parser_assert(symbol_if);
+	assert(symbol_if);
 	expr();
-	parser_assert(symbol_then);
+	assert(symbol_then);
 	stmt_sequence();
-	while (scanner_token.lexem.symbol == symbol_elsif) {
-		parser_assert(symbol_elsif);
+	while (current_token.lexem.symbol == symbol_elsif) {
+		assert(symbol_elsif);
 		expr();
-		parser_assert(symbol_then);
+		assert(symbol_then);
 		stmt_sequence();
 	}
-	if (scanner_token.lexem.symbol == symbol_else) {
-		parser_assert(symbol_else);
+	if (current_token.lexem.symbol == symbol_else) {
+		assert(symbol_else);
 		stmt_sequence();
 	}
-	parser_assert(symbol_end);
+	assert(symbol_end);
 }
 
 // while_stmt = "while" expr "do" stmt_sequence "end"
 void while_stmt()
 {
-	parser_assert(symbol_while);
+	assert(symbol_while);
 	expr();
-	parser_assert(symbol_do);
+	assert(symbol_do);
 	stmt_sequence();
-	parser_assert(symbol_end);
+	assert(symbol_end);
 }
 
 // repeat_stmt = "repeat" stmt_sequence "until" expr
 void repeat_stmt()
 {
-	parser_assert(symbol_repeat);
+	assert(symbol_repeat);
 	stmt_sequence();
-	parser_assert(symbol_until);
+	assert(symbol_until);
 	expr();
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 void stmt()
 {
-	if (scanner_token.lexem.symbol == symbol_id) {
-		parser_assert(symbol_id);
+	if (current_token.lexem.symbol == symbol_id) {
+		assert(symbol_id);
 		// FAZER: Adicionar geração de código e obtenção da entrada na tabela de símbolos
 		selector(NULL);
-		if (is_first("assignment", scanner_token.lexem.symbol))
+		if (is_first("assignment", current_token.lexem.symbol))
 			assignment(NULL);
-		else if (is_first("proc_call", scanner_token.lexem.symbol) || is_follow("proc_call", scanner_token.lexem.symbol))
+		else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol))
 			proc_call();
 		else {
 			// Sincroniza
-			mark(error_parser, scanner_token.position, "Invalid statement.");
-			while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
-				parser_next();
+			mark(error_parser, current_token.position, "Invalid statement.");
+			while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+				scan();
 		}
-	}	else if (is_first("if_stmt", scanner_token.lexem.symbol))
+	}	else if (is_first("if_stmt", current_token.lexem.symbol))
 		if_stmt();
-	else if (is_first("while_stmt", scanner_token.lexem.symbol))
+	else if (is_first("while_stmt", current_token.lexem.symbol))
 		while_stmt();
-	else if (is_first("repeat_stmt", scanner_token.lexem.symbol))
+	else if (is_first("repeat_stmt", current_token.lexem.symbol))
 		repeat_stmt();
 	// Sincroniza
-	if (!is_follow("stmt", scanner_token.lexem.symbol)) {
-		mark(error_parser, scanner_token.position, "Missing \";\" or \"end\".");
-		while (!is_follow("stmt", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
-			parser_next();
+	if (!is_follow("stmt", current_token.lexem.symbol)) {
+		mark(error_parser, current_token.position, "Missing \";\" or \"end\".");
+		while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+			scan();
 	}
 }
 
@@ -327,8 +327,8 @@ void stmt()
 void stmt_sequence()
 {
 	stmt();
-	while (scanner_token.lexem.symbol == symbol_semicolon) {
-		parser_assert(symbol_semicolon);
+	while (current_token.lexem.symbol == symbol_semicolon) {
+		assert(symbol_semicolon);
 		stmt();
 	}
 }
@@ -336,12 +336,12 @@ void stmt_sequence()
 // id_list = id {"," id}
 entry_t *id_list()
 {
-	parser_assert(symbol_id);
-	entry_t *new_entries = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_var);
-	while (scanner_token.lexem.symbol == symbol_comma) {
-		parser_assert(symbol_comma);
-		if (parser_assert(symbol_id))
-			append_entry(create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_var), &new_entries);
+	assert(symbol_id);
+	entry_t *new_entries = create_entry(last_token.lexem.id, last_token.position, class_var);
+	while (current_token.lexem.symbol == symbol_comma) {
+		assert(symbol_comma);
+		if (assert(symbol_id))
+			append_entry(create_entry(last_token.lexem.id, last_token.position, class_var), &new_entries);
 	}
 	return new_entries;
 }
@@ -351,12 +351,12 @@ type_t *type();
 // array_type = "array" expr "of" type
 type_t *array_type()
 {
-	parser_assert(symbol_array);
+	assert(symbol_array);
 	//	expr();
 	value_t length = 0;
-	if (parser_assert(symbol_number))
-		length = scanner_last_token.value;
-	parser_assert(symbol_of);
+	if (assert(symbol_number))
+		length = last_token.value;
+	assert(symbol_of);
 	type_t *base = type();
 	unsigned int size = 0;
 	if (base)
@@ -367,9 +367,9 @@ type_t *array_type()
 // field_list = [id_list ":" type]
 entry_t *field_list()
 {
-	if (is_first("id_list", scanner_token.lexem.symbol)) {
+	if (is_first("id_list", current_token.lexem.symbol)) {
 		entry_t *new_fields = id_list();
-		parser_assert(symbol_colon);
+		assert(symbol_colon);
 		type_t *base_type = type();
 		entry_t *e = new_fields;
 		while (e) {
@@ -384,10 +384,10 @@ entry_t *field_list()
 // record_type = "record" field_list {";" field_list} "end"
 type_t *record_type()
 {
-	parser_assert(symbol_record);
+	assert(symbol_record);
 	entry_t *fields = field_list();
-	while (scanner_token.lexem.symbol == symbol_semicolon) {
-		parser_assert(symbol_semicolon);
+	while (current_token.lexem.symbol == symbol_semicolon) {
+		assert(symbol_semicolon);
 		entry_t *more_fields = field_list();
 		if (fields && more_fields)
 			append_entry(more_fields, &fields);
@@ -404,46 +404,46 @@ type_t *record_type()
 			e = e->next;
 		}
 	}
-	parser_assert(symbol_end);
+	assert(symbol_end);
 	return create_type(form_record, 0, size, fields, NULL);
 }
 
 // type = id | array_type | record_type
 type_t *type()
 {
-	if (scanner_token.lexem.symbol == symbol_id) {
+	if (current_token.lexem.symbol == symbol_id) {
 		// Qualquer tipo atômico deve ser baseado em um dos tipos internos da linguagem (neste caso apenas “integer”)
-		parser_assert(symbol_id);
-		entry_t *entry = find_entry(scanner_last_token.lexem.id, symbol_table);
+		assert(symbol_id);
+		entry_t *entry = find_entry(last_token.lexem.id, symbol_table);
 		if (entry)
 			return entry->type;
 		else
-			mark(error_parser, scanner_last_token.position, "Unknown type \"%s\".", scanner_last_token.lexem.id);
-	} else if (is_first("array_type", scanner_token.lexem.symbol)) {
+			mark(error_parser, last_token.position, "Unknown type \"%s\".", last_token.lexem.id);
+	} else if (is_first("array_type", current_token.lexem.symbol)) {
 		type_t *new_type = array_type();
 		if (!new_type)
-			mark(error_parser, scanner_token.position, "Invalid array type.");
+			mark(error_parser, current_token.position, "Invalid array type.");
 		return new_type;
-	} else if (is_first("record_type", scanner_token.lexem.symbol)) {
+	} else if (is_first("record_type", current_token.lexem.symbol)) {
 		type_t *new_type = record_type();
 		if (!new_type)
-			mark(error_parser, scanner_token.position, "Invalid record type.");
+			mark(error_parser, current_token.position, "Invalid record type.");
 		return new_type;
 	}
 	// Sincroniza
-	mark(error_parser, scanner_token.position, "Missing type.");
-	while (!is_follow("type", scanner_token.lexem.symbol) && scanner_token.lexem.symbol != symbol_eof)
-		parser_next();
+	mark(error_parser, current_token.position, "Missing type.");
+	while (!is_follow("type", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+		scan();
 	return NULL;
 }
 
 // formal_params_section = ["var"] id_list ":" type
 entry_t *formal_params_section()
 {
-	if (scanner_token.lexem.symbol == symbol_var)
-		parser_assert(symbol_var);
+	if (current_token.lexem.symbol == symbol_var)
+		assert(symbol_var);
 	entry_t *new_params = id_list();
-	parser_assert(symbol_colon);
+	assert(symbol_colon);
 	type_t *base_type = type();
 	entry_t *e = new_params;
 	while (e) {
@@ -457,25 +457,25 @@ entry_t *formal_params_section()
 entry_t *formal_params()
 {
 	entry_t *params = NULL;
-	parser_assert(symbol_open_paren);
-	if (is_first("formal_params_section", scanner_token.lexem.symbol)) {
+	assert(symbol_open_paren);
+	if (is_first("formal_params_section", current_token.lexem.symbol)) {
 		params = formal_params_section();
-		while (scanner_token.lexem.symbol == symbol_semicolon) {
-			parser_assert(symbol_semicolon);
+		while (current_token.lexem.symbol == symbol_semicolon) {
+			assert(symbol_semicolon);
 			append_entry(formal_params_section(), &params);
 		}
 	}
-	parser_assert(symbol_close_paren);
+	assert(symbol_close_paren);
 	return params;
 }
 
 // proc_head = "procedure" id [formal_params]
 void proc_head()
 {
-	parser_assert(symbol_proc);
-	parser_assert(symbol_id);
+	assert(symbol_proc);
+	assert(symbol_id);
 	// FAZER: Implementar parâmetros para a entrada do procedimento na tabela de símbolos
-	if (is_first("formal_params", scanner_token.lexem.symbol))
+	if (is_first("formal_params", current_token.lexem.symbol))
 		formal_params();
 }
 
@@ -485,19 +485,19 @@ void declarations();
 void proc_body()
 {
 	declarations();
-	if (scanner_token.lexem.symbol == symbol_begin) {
-		parser_assert(symbol_begin);
+	if (current_token.lexem.symbol == symbol_begin) {
+		assert(symbol_begin);
 		stmt_sequence();
 	}
-	parser_assert(symbol_end);
-	parser_assert(symbol_id);
+	assert(symbol_end);
+	assert(symbol_id);
 }
 
 // proc_decl = proc_head ";" proc_body
 void proc_decl()
 {
 	proc_head();
-	parser_assert(symbol_semicolon);
+	assert(symbol_semicolon);
 	proc_body();
 }
 
@@ -519,46 +519,46 @@ void proc_decl()
 // const_decl = "const" {id "=" expr ";"}
 void const_decl()
 {
-	parser_assert(symbol_const);
-	while (scanner_token.lexem.symbol == symbol_id) {
-		parser_assert(symbol_id);
-		entry_t *new_entry = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_const);
-		parser_assert(symbol_equal);
+	assert(symbol_const);
+	while (current_token.lexem.symbol == symbol_id) {
+		assert(symbol_id);
+		entry_t *new_entry = create_entry(last_token.lexem.id, last_token.position, class_const);
+		assert(symbol_equal);
 		// expr();
-		parser_assert(symbol_number);
+		assert(symbol_number);
 		if (new_entry) {
-			new_entry->value = scanner_last_token.value;
+			new_entry->value = last_token.value;
 			append_entry(new_entry, &symbol_table);
 		}
-		parser_assert(symbol_semicolon);
+		assert(symbol_semicolon);
 	}
 }
 
 // type_decl = "type" {id "=" type ";"}
 void type_decl()
 {
-	parser_assert(symbol_type);
-	while (scanner_token.lexem.symbol == symbol_id) {
-		parser_assert(symbol_id);
-		entry_t *new_entry = create_entry(scanner_last_token.lexem.id, scanner_last_token.position, class_type);
+	assert(symbol_type);
+	while (current_token.lexem.symbol == symbol_id) {
+		assert(symbol_id);
+		entry_t *new_entry = create_entry(last_token.lexem.id, last_token.position, class_type);
 		// FAZER: Melhorar erro para o “igual”
-		parser_assert(symbol_equal);
+		assert(symbol_equal);
 		type_t *base = type();
 		if (new_entry && base) {
 			new_entry->type = base;
 			append_entry(new_entry, &symbol_table);
 		}
-		parser_assert(symbol_semicolon);
+		assert(symbol_semicolon);
 	}
 }
 
 // var_decl = "var" {id_list ":" type ";"}
 void var_decl()
 {
-	parser_assert(symbol_var);
-	while (is_first("id_list", scanner_token.lexem.symbol)) {
+	assert(symbol_var);
+	while (is_first("id_list", current_token.lexem.symbol)) {
 		entry_t *new_entries = id_list();
-		parser_assert(symbol_colon);
+		assert(symbol_colon);
 		type_t *base = type();
 		entry_t *e = new_entries;
 		while (e && base) {
@@ -568,54 +568,54 @@ void var_decl()
 			e = e->next;
 		}
 		append_entry(new_entries, &symbol_table);
-		parser_assert(symbol_semicolon);
+		assert(symbol_semicolon);
 	}
 }
 
 // declarations = [const_decl] [type_decl] [var_decl] {proc_decl ";"}
 void declarations()
 {
-	if (is_first("const_decl", scanner_token.lexem.symbol))
+	if (is_first("const_decl", current_token.lexem.symbol))
 			const_decl();
-	if (is_first("type_decl", scanner_token.lexem.symbol))
+	if (is_first("type_decl", current_token.lexem.symbol))
 			type_decl();
-	if (is_first("var_decl", scanner_token.lexem.symbol))
+	if (is_first("var_decl", current_token.lexem.symbol))
 			var_decl();
-	while (is_first("proc_decl", scanner_token.lexem.symbol)) {
+	while (is_first("proc_decl", current_token.lexem.symbol)) {
 		proc_decl();
-		parser_assert(symbol_semicolon);
+		assert(symbol_semicolon);
 	}
 }
 
 // module = "module" id ";" declarations ["begin" stmt_sequence] "end" id "."
 void module()
 {
-	parser_assert(symbol_module);
-	parser_assert(symbol_id);
-	parser_assert(symbol_semicolon);
+	assert(symbol_module);
+	assert(symbol_id);
+	assert(symbol_semicolon);
 	declarations();
-	if (scanner_token.lexem.symbol == symbol_begin) {
-		parser_assert(symbol_begin);
+	if (current_token.lexem.symbol == symbol_begin) {
+		assert(symbol_begin);
 		stmt_sequence();
 	}
-	parser_assert(symbol_end);
-	parser_assert(symbol_id);
-	parser_assert(symbol_period);
+	assert(symbol_end);
+	assert(symbol_id);
+	assert(symbol_period);
 }
 
 // Retorna se a inicialização do analisador léxico e da tabela de símbolos obteve sucesso ou não e se o arquivo de 
 // entrada estava em branco
-bool parser_initialize(FILE *file)
+bool initialize_parser(FILE *file)
 {
-	parser_should_log = false;
+	should_log = false;
 	if (!initialize_table(0, &symbol_table))
 		return false;
-	scanner_initialize(file);
-	scanner_get();
-	return scanner_token.lexem.symbol != symbol_eof;
+	initialize_scanner(file);
+	read_token();
+	return current_token.lexem.symbol != symbol_eof;
 }
 
-bool parser_run()
+bool parse()
 {
 	module();
 	clear_table(&symbol_table);

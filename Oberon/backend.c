@@ -28,7 +28,7 @@ void load(address_t address)
 	fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, address);
 	register_index++;
 	if (register_index > REGISTER_INDEX_MAX) {
-		mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+		mark(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -38,7 +38,7 @@ void load_immediate(value_t value)
 	fprintf(output_file, "\tLOAD R%d, %d\n", register_index, value);
 	register_index++;
 	if (register_index > REGISTER_INDEX_MAX) {
-		mark(error_fatal, scanner_last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
+		mark(error_fatal, last_token.position, "Waaaaay too many registers needed. Sorry, no can do!");
 		exit(EXIT_FAILURE);
 	}
 }

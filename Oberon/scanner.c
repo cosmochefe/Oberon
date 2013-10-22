@@ -64,20 +64,16 @@
 #include "errors.h"
 #include "scanner.h"
 
-token_t scanner_token;
-token_t scanner_last_token;
-
-position_t scanner_position;
-
+// Variávies e constantes globais
+token_t current_token, last_token;
 const position_t position_zero = { .line = 0, .column = 0, .index = 0 };
 
-char scanner_char;
-char scanner_last_char;
-
 FILE *input_file;
+char current_char, last_char;
+position_t current_position;
 
 // Vetor com todas as palavras-chave da linguagem
-lexem_t scanner_keywords[] = {
+lexem_t keywords[] = {
 	{ .id = "do",					.symbol = symbol_do },
 	{ .id = "if",					.symbol = symbol_if },
 	{ .id = "of",					.symbol = symbol_of },
@@ -100,10 +96,10 @@ lexem_t scanner_keywords[] = {
 	{ .id = "div",				.symbol = symbol_div },
 	{ .id = "module",			.symbol = symbol_module }
 };
-const unsigned int scanner_keywords_count = sizeof(scanner_keywords) / sizeof(lexem_t);
+const unsigned int keywords_count = sizeof(keywords) / sizeof(lexem_t);
 
 // Vetor com todos os operadores da linguagem
-lexem_t scanner_operators[] = {
+lexem_t operators[] = {
 	{ .id = "*",	.symbol = symbol_times },
 	{ .id = "&",	.symbol = symbol_and },
 	{ .id = "+",	.symbol = symbol_plus },
@@ -117,10 +113,10 @@ lexem_t scanner_operators[] = {
 	{ .id = "~",	.symbol = symbol_not },
 	{ .id = ":=",	.symbol = symbol_becomes }
 };
-const unsigned int scanner_operators_count = sizeof(scanner_keywords) / sizeof(lexem_t);
+const unsigned int operators_count = sizeof(keywords) / sizeof(lexem_t);
 
 // Vetor com todos os sinais de pontuação da linguagem
-lexem_t scanner_punctuation[] = {
+lexem_t punctuation[] = {
 	{ .id = ".", .symbol = symbol_period },
 	{ .id = ",", .symbol = symbol_colon },
 	{ .id = ":", .symbol = symbol_comma },
@@ -130,7 +126,7 @@ lexem_t scanner_punctuation[] = {
 	{ .id = "[", .symbol = symbol_open_bracket },
 	{ .id = ";", .symbol = symbol_semicolon }
 };
-const unsigned int scanner_punctuation_count = sizeof(scanner_keywords) / sizeof(lexem_t);
+const unsigned int punctuation_count = sizeof(keywords) / sizeof(lexem_t);
 
 //
 // Analisador léxico
@@ -162,11 +158,11 @@ bool is_newline(char c, char p)
 bool is_keyword(identifier_t id, symbol_t *symbol)
 {
 	unsigned int index = 0;
-	while (index < scanner_keywords_count && strcasecmp(scanner_keywords[index].id, id) != 0)
+	while (index < keywords_count && strcasecmp(keywords[index].id, id) != 0)
 		index++;
-	if (index < scanner_keywords_count) {
+	if (index < keywords_count) {
 		if (symbol)
-			*symbol = scanner_keywords[index].symbol;
+			*symbol = keywords[index].symbol;
 		return true;
 	}
 	if (symbol)
@@ -456,37 +452,37 @@ bool is_follow(const char *non_terminal, symbol_t symbol)
 
 char *id_for_symbol(symbol_t symbol)
 {
-	for (unsigned int index = 0; index < scanner_keywords_count; index++)
-		if (scanner_keywords[index].symbol == symbol)
-			return scanner_keywords[index].id;
-	for (unsigned int index = 0; index < scanner_operators_count; index++)
-		if (scanner_operators[index].symbol == symbol)
-			return scanner_operators[index].id;
-	for (unsigned int index = 0; index < scanner_punctuation_count; index++)
-		if (scanner_punctuation[index].symbol == symbol)
-			return scanner_punctuation[index].id;
+	for (unsigned int index = 0; index < keywords_count; index++)
+		if (keywords[index].symbol == symbol)
+			return keywords[index].id;
+	for (unsigned int index = 0; index < operators_count; index++)
+		if (operators[index].symbol == symbol)
+			return operators[index].id;
+	for (unsigned int index = 0; index < punctuation_count; index++)
+		if (punctuation[index].symbol == symbol)
+			return punctuation[index].id;
 	return "unknown";
 }
 
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
-bool scanner_step()
+bool read_char()
 {
-	scanner_last_char = scanner_char;
-	if (fread(&scanner_char, sizeof(char), 1, input_file) == sizeof(char)) {
-		if (is_newline(scanner_char, scanner_last_char)) {
-			scanner_position.line++;
-			scanner_position.column = 0;
-		} else scanner_position.column++;
-		scanner_position.index++;
+	last_char = current_char;
+	if (fread(&current_char, sizeof(char), 1, input_file) == sizeof(char)) {
+		if (is_newline(current_char, last_char)) {
+			current_position.line++;
+			current_position.column = 0;
+		} else current_position.column++;
+		current_position.index++;
 		return true;
 	}
 	return false;
 }
 
 //
-// ATENÇÃO: todas as funções do analisador léxico devem garantir que “scanner_char” termine com o caractere subsequente
+// ATENÇÃO: todas as funções do analisador léxico devem garantir que “current_char” termine com o caractere subsequente
 // ao lexema reconhecido. Por exemplo, ao analisar “var x: integer”, a função “id“ será a primeira a ser invocada para
-// reconhecer “var”. Ao terminar, “scanner_char” deve conter o espaço em branco entre “var” e “x”
+// reconhecer “var”. Ao terminar, “current_char” deve conter o espaço em branco entre “var” e “x”
 //
 // As funções “id”, “integer” e “number” fazem parte da EBNF e deveriam ser consideradas parte do analisador sintático.
 // No entanto, pela forma com que o compilador está definido, o reconhecimento de lexemas também é estipulado pela EBNF
@@ -496,47 +492,47 @@ bool scanner_step()
 void id()
 {
 	unsigned int index = 0;
-	scanner_token.position = scanner_position;
-	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || is_digit(scanner_char))) {
-		scanner_token.lexem.id[index++] = scanner_char;
-		if (!scanner_step())
+	current_token.position = current_position;
+	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(current_char) || is_digit(current_char))) {
+		current_token.lexem.id[index++] = current_char;
+		if (!read_char())
 			break;
 	}
 	// O tamanho máximo para um identificador é especificado por “id_length”, a variável “scanner_id” possui tamanho
 	// “id_length + 1” e por isso o caractere terminador pode ser incluído mesmo que o limite seja alcançado
-	scanner_token.lexem.id[index] = '\0';
-	if (!is_keyword(scanner_token.lexem.id, &scanner_token.lexem.symbol))
-		scanner_token.lexem.symbol = symbol_id;
+	current_token.lexem.id[index] = '\0';
+	if (!is_keyword(current_token.lexem.id, &current_token.lexem.symbol))
+		current_token.lexem.symbol = symbol_id;
 }
 
 // FAZER: Adicionar verificação se o número é muito longo
 void integer()
 {
 	unsigned int index = 0;
-	scanner_token.position = scanner_position;
-	scanner_token.value = 0;
+	current_token.position = current_position;
+	current_token.value = 0;
 	identifier_t id;
-	while (index < SCANNER_MAX_ID_LENGTH && is_digit(scanner_char)) {
-		id[index] = scanner_char;
-		scanner_token.lexem.id[index] = scanner_char;
+	while (index < SCANNER_MAX_ID_LENGTH && is_digit(current_char)) {
+		id[index] = current_char;
+		current_token.lexem.id[index] = current_char;
 		index++;
 		// Efetua o cálculo do valor, dígito-a-dígito, com base nos caracteres lidos
-		scanner_token.value = 10 * scanner_token.value + (scanner_char - '0');
-		if (!scanner_step())
+		current_token.value = 10 * current_token.value + (current_char - '0');
+		if (!read_char())
 			break;
 	}
-	scanner_token.lexem.id[index] = '\0';
-	scanner_token.lexem.symbol = symbol_number;
+	current_token.lexem.id[index] = '\0';
+	current_token.lexem.symbol = symbol_number;
 	// Avalia se há caracteres inválidos após os dígitos do número
 	bool invalid_ending = false;
-	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(scanner_char) || scanner_char == '_')) {
-		id[index++] = scanner_char;
+	while (index < SCANNER_MAX_ID_LENGTH && (is_letter(current_char) || current_char == '_')) {
+		id[index++] = current_char;
 		invalid_ending	= true;
-		if (!scanner_step())
+		if (!read_char())
 			break;
 	}
 	if (invalid_ending)
-		mark(error_warning, scanner_token.position, "\"%s\" is not a number. Assuming \"%s\".", id, scanner_token.lexem.id);
+		mark(error_warning, current_token.position, "\"%s\" is not a number. Assuming \"%s\".", id, current_token.lexem.id);
 }
 
 // Por definição, somente números positivos inteiros são reconhecidos
@@ -545,110 +541,108 @@ void number()
 	integer();
 }
 
-// Ao entrar nesta função, o analisador léxico já encontrou os caracteres "(*" que iniciam o comentário e “scanner_char”
+// Ao entrar nesta função, o analisador léxico já encontrou os caracteres "(*" que iniciam o comentário e “current_char”
 // possui o asterisco como valor
 void comment()
 {
-	char previous_char = scanner_char;
-	scanner_token.position = scanner_position;
-	while (scanner_step()) {
+	current_token.position = current_position;
+	while (read_char()) {
 		// Comentários aninhados
-		if (scanner_char == '*' && previous_char == '(')
+		if (current_char == '*' && last_char == '(')
 			comment();
 		// Fim do comentário
-		if (scanner_char == ')' && previous_char == '*') {
-			scanner_step();
+		if (current_char == ')' && last_char == '*') {
+			read_char();
 			return;
 		}
-		previous_char = scanner_char;
 	}
-	mark(error_fatal, scanner_token.position, "Endless comment detected.");
-	scanner_token.lexem.symbol = symbol_eof;
+	mark(error_fatal, current_token.position, "Endless comment detected.");
+	current_token.lexem.symbol = symbol_eof;
 }
 
-void scanner_get()
+void read_token()
 {
-	scanner_last_token = scanner_token;
+	last_token = current_token;
 	// Salta os caracteres em branco, incluindo símbolos de quebra de linha
-	while (is_blank(scanner_char))
-		scanner_step();
+	while (is_blank(current_char))
+		read_char();
 	if (feof(input_file)) {
-		strcpy(scanner_token.lexem.id, "EOF");
-		scanner_token.lexem.symbol = symbol_eof;
+		strcpy(current_token.lexem.id, "EOF");
+		current_token.lexem.symbol = symbol_eof;
 		return;
 	}
 	// Os casos de um identificador ou um número são considerados separadamente para que o código no “switch” não precise
-	// incluir uma chamada a “scanner_step” em cada “case”
-	if (is_letter(scanner_char)) {
+	// incluir uma chamada a “read_char” em cada “case”
+	if (is_letter(current_char)) {
 		id();
 		return;
-	} else if (is_digit(scanner_char)) {
+	} else if (is_digit(current_char)) {
 		number();
 		return;
 	}
-	scanner_token.position = scanner_position;
-	scanner_token.lexem.id[0] = scanner_char;
-	switch (scanner_token.lexem.id[0]) {
-		case '&': scanner_token.lexem.symbol = symbol_and;						break;
-		case '*': scanner_token.lexem.symbol = symbol_times;					break;
-		case '+': scanner_token.lexem.symbol = symbol_plus;						break;
-		case '-': scanner_token.lexem.symbol = symbol_minus;					break;
-		case '=': scanner_token.lexem.symbol = symbol_equal;					break;
-		case '#': scanner_token.lexem.symbol = symbol_not_equal;			break;
-		case '<': scanner_token.lexem.symbol = symbol_less;						break;
-		case '>': scanner_token.lexem.symbol = symbol_greater;				break;
-		case ';': scanner_token.lexem.symbol = symbol_semicolon;			break;
-		case ',':	scanner_token.lexem.symbol = symbol_comma;					break;
-		case ':': scanner_token.lexem.symbol = symbol_colon;					break;
-		case '.': scanner_token.lexem.symbol = symbol_period;					break;
-		case '(': scanner_token.lexem.symbol = symbol_open_paren;			break;
-		case ')': scanner_token.lexem.symbol = symbol_close_paren;		break;
-		case '[': scanner_token.lexem.symbol = symbol_open_bracket;		break;
-		case ']': scanner_token.lexem.symbol = symbol_close_bracket;	break;
-		case '~': scanner_token.lexem.symbol = symbol_not;						break;
-		default:	scanner_token.lexem.symbol = symbol_null;						break;
+	current_token.position = current_position;
+	current_token.lexem.id[0] = current_char;
+	switch (current_token.lexem.id[0]) {
+		case '&': current_token.lexem.symbol = symbol_and;						break;
+		case '*': current_token.lexem.symbol = symbol_times;					break;
+		case '+': current_token.lexem.symbol = symbol_plus;						break;
+		case '-': current_token.lexem.symbol = symbol_minus;					break;
+		case '=': current_token.lexem.symbol = symbol_equal;					break;
+		case '#': current_token.lexem.symbol = symbol_not_equal;			break;
+		case '<': current_token.lexem.symbol = symbol_less;						break;
+		case '>': current_token.lexem.symbol = symbol_greater;				break;
+		case ';': current_token.lexem.symbol = symbol_semicolon;			break;
+		case ',':	current_token.lexem.symbol = symbol_comma;					break;
+		case ':': current_token.lexem.symbol = symbol_colon;					break;
+		case '.': current_token.lexem.symbol = symbol_period;					break;
+		case '(': current_token.lexem.symbol = symbol_open_paren;			break;
+		case ')': current_token.lexem.symbol = symbol_close_paren;		break;
+		case '[': current_token.lexem.symbol = symbol_open_bracket;		break;
+		case ']': current_token.lexem.symbol = symbol_close_bracket;	break;
+		case '~': current_token.lexem.symbol = symbol_not;						break;
+		default:	current_token.lexem.symbol = symbol_null;						break;
 	}
-	scanner_token.lexem.id[1] = '\0';
-	scanner_step();
-	if (scanner_token.lexem.symbol == symbol_null) {
-		mark(error_scanner, scanner_token.position, "\"%s\" is not a valid symbol.", scanner_token.lexem.id);
+	current_token.lexem.id[1] = '\0';
+	read_char();
+	if (current_token.lexem.symbol == symbol_null) {
+		mark(error_scanner, current_token.position, "\"%s\" is not a valid symbol.", current_token.lexem.id);
 		return;
 	}
 	// Os casos abaixo representam os lexemas com mais de um caracter (como “>=”, “:=” etc.)
-	if (scanner_token.lexem.symbol == symbol_less && scanner_char == '=') {
-		scanner_token.lexem.id[1] = '=';
-		scanner_token.lexem.id[2] = '\0';
-		scanner_step();
-		scanner_token.lexem.symbol = symbol_less_equal;
-	} else if (scanner_token.lexem.symbol == symbol_greater && scanner_char == '=') {
-		scanner_token.lexem.id[1] = '=';
-		scanner_token.lexem.id[2] = '\0';
-		scanner_step();
-		scanner_token.lexem.symbol = symbol_greater_equal;
-	} else if (scanner_token.lexem.symbol == symbol_colon && scanner_char == '=') {
-		scanner_token.lexem.id[1] = '=';
-		scanner_token.lexem.id[2] = '\0';
-		scanner_step();
-		scanner_token.lexem.symbol = symbol_becomes;
-	} else if (scanner_token.lexem.symbol == symbol_open_paren	&& scanner_char == '*') {
-		scanner_step();
+	if (current_token.lexem.symbol == symbol_less && current_char == '=') {
+		current_token.lexem.id[1] = '=';
+		current_token.lexem.id[2] = '\0';
+		read_char();
+		current_token.lexem.symbol = symbol_less_equal;
+	} else if (current_token.lexem.symbol == symbol_greater && current_char == '=') {
+		current_token.lexem.id[1] = '=';
+		current_token.lexem.id[2] = '\0';
+		read_char();
+		current_token.lexem.symbol = symbol_greater_equal;
+	} else if (current_token.lexem.symbol == symbol_colon && current_char == '=') {
+		current_token.lexem.id[1] = '=';
+		current_token.lexem.id[2] = '\0';
+		read_char();
+		current_token.lexem.symbol = symbol_becomes;
+	} else if (current_token.lexem.symbol == symbol_open_paren	&& current_char == '*') {
+		read_char();
 		// Ignora os caracteres entre “(*” e “*)” como sendo comentários e entra novamente na função para buscar o próximo
 		// lexema válido
 		comment();
-		scanner_get();
+		read_token();
 	}
 }
 
-void scanner_initialize(FILE *file)
+void initialize_scanner(FILE *file)
 {
 	input_file = file;
-	strcpy(scanner_token.lexem.id, "");
-	scanner_token.position = position_zero;
-	scanner_token.lexem.symbol = symbol_null;
-	scanner_token.value = 0;
-	scanner_position.line = 1;
-	scanner_position.column = 0;
-	scanner_position.index = 0;
-	scanner_char = '\0';
-	scanner_step();
+	strcpy(current_token.lexem.id, "");
+	current_token.position = position_zero;
+	current_token.lexem.symbol = symbol_null;
+	current_token.value = 0;
+	current_position.line = 1;
+	current_position.column = 0;
+	current_position.index = 0;
+	current_char = '\0';
+	read_char();
 }

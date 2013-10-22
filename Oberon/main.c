@@ -30,11 +30,11 @@ int main(int argc, const char *argv[])
 		printf("Input or output files could not be opened.\n");
 		return 0;
 	}
-	if (!parser_initialize(input_file))
+	if (!initialize_parser(input_file))
 		printf("Empty or damaged input file.\n");
 	else {
 		initialize_backend(output_file);
-		parser_run();
+		parse();
 	}
 	fclose(input_file);
 	fclose(output_file);

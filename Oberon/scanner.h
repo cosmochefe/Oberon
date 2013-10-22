@@ -83,9 +83,8 @@ typedef struct _token {
 	position_t position;
 } token_t;
 
-extern token_t scanner_token;
-extern token_t scanner_last_token;
-extern position_t scanner_position;
+extern token_t current_token, last_token;
+
 extern const position_t position_zero;
 
 bool is_first(const char *non_terminal, symbol_t symbol);
@@ -93,7 +92,7 @@ bool is_follow(const char *non_terminal, symbol_t symbol);
 
 char *id_for_symbol(symbol_t symbol);
 
-void scanner_initialize(FILE *file);
-void scanner_get();
+void initialize_scanner(FILE *file);
+void read_token();
 
 #endif
