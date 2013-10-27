@@ -506,7 +506,7 @@ void id()
 		current_token.lexem.symbol = symbol_id;
 }
 
-// FAZER: Adicionar verificação se o número é muito longo
+// TODO: Adicionar verificação se o número é muito longo
 void integer()
 {
 	unsigned int index = 0;

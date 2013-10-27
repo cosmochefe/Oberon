@@ -24,5 +24,6 @@ typedef enum _error {
 
 void mark_at(const error_t error, const position_t position, const char *message, ...);
 void mark(const error_t error, const char *message, ...);
+void mark_missing(symbol_t symbol);
 
 #endif

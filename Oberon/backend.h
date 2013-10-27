@@ -17,8 +17,8 @@ typedef unsigned short address_t;
 
 void initialize_backend(FILE *file);
 
-void load(address_t address);
-void load_immediate(value_t value);
-void store(address_t address);
+void write_load(address_t address);
+void write_load_immediate(value_t value);
+void write_store(address_t address);
 
 #endif

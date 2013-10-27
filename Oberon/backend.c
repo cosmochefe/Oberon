@@ -24,7 +24,7 @@ void initialize_backend(FILE *file)
 	output_file = file;
 }
 
-void load(address_t address)
+void write_load(address_t address)
 {
 	fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, address);
 	register_index++;
@@ -34,7 +34,7 @@ void load(address_t address)
 	}
 }
 
-void load_immediate(value_t value)
+void write_load_immediate(value_t value)
 {
 	fprintf(output_file, "\tLOAD R%d, %d\n", register_index, value);
 	register_index++;
@@ -44,52 +44,52 @@ void load_immediate(value_t value)
 	}
 }
 
-void store(address_t address)
+void write_store(address_t address)
 {
 	
 }
 
-void backend_sum()
+void write_sum()
 {
 	
 }
 
-void backend_negate()
+void write_negate()
 {
 	
 }
 
-void backend_subract()
+void write_subract()
 {
 	
 }
 
-void backend_multiply()
+void write_multiply()
 {
 	
 }
 
-void backend_divide()
+void write_divide()
 {
 	
 }
 
-void backend_logic_xor()
+void write_logic_xor()
 {
 	
 }
 
-void backend_logic_or()
+void write_logic_or()
 {
 	
 }
 
-void backend_logic_and()
+void write_logic_and()
 {
 	
 }
 
-void backend_logic_not()
+void write_logic_not()
 {
 	
 }

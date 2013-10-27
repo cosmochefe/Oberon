@@ -35,9 +35,9 @@
 //	- term = factor {("*" | "div" | "mod" | "&") factor}
 //	- simple_expr = ["+" | "-"] term {("+" | "-" | "OR") term}
 //	- expr = simple_expr [("=" | "#" | "<" | "<=" | ">" | ">=") simple_expr]
-//	- assignment = ident selector ":=" expr
+//	- assignment = id selector ":=" expr
 //	- actual_params = "(" [expr {"," expr}] ")"
-//	- proc_call = ident selector [actual_params]
+//	- proc_call = id selector [actual_params]
 //	- if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 //	- while_stmt = "while" expr "do" stmt_sequence "end"
 //	- repeat_stmt = "repeat" stmt_sequence "until" expr
@@ -77,92 +77,95 @@ bool scan()
 	return current_token.lexem.symbol == symbol_eof;
 }
 
-bool assert(symbol_t symbol, bool scan_next)
+bool verify(symbol_t symbol, bool mark_error, bool next)
 {
 	if (current_token.lexem.symbol == symbol || symbol == symbol_null) {
 		if (should_log)
 			mark(error_log, "\"%s\" found.", current_token.lexem.id);
-		if (scan_next)
+		if (next)
 			scan();
 		return true;
 	}
-	if (symbol == symbol_id)
-		mark(error_parser, "Missing identifier.");
-	else if (symbol == symbol_number)
-		mark(error_parser, "Missing number.");
-	else
-		mark(error_parser, "Missing \"%s\".", id_for_symbol(symbol));
+	if (mark_error)
+		mark_missing(symbol);
 	return false;
 }
 
-// Esta função faz basicamente o mesmo que “recognize”, mas não avança para a próxima ficha léxica
-static inline bool verify(symbol_t symbol)
+// As versões com “try_” não mostram mensagens de erro caso não encontrem o símbolo passado como parâmetro
+
+// Esta função faz o mesmo que “consume”, mas não avança para a próxima ficha léxica
+static inline bool assert(symbol_t symbol)
 {
-	return assert(symbol, false);
+	return verify(symbol, true, false);
+}
+static inline bool try_assert(symbol_t symbol)
+{
+	return verify(symbol, false, false);
 }
 
 // Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
-static inline bool recognize(symbol_t symbol)
+static inline bool consume(symbol_t symbol)
 {
-	return assert(symbol, true);
+	return verify(symbol, true, true);
+}
+static inline bool try_consume(symbol_t symbol)
+{
+	return verify(symbol, false, true);
 }
 
 void expr();
 
 // selector = {"." id | "[" expr "]"}
-void selector(entry_t **ref)
+address_t selector(entry_t *entry)
 {
+	if (!entry)
+		return 0;
 	while (is_first("selector", current_token.lexem.symbol)) {
-		if (current_token.lexem.symbol == symbol_period) {
-			recognize(symbol_period);
-			// FAZER: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
-			recognize(symbol_id);
-		} else {
-			// FAZER: Verificar se entry é um vetor
-			recognize(symbol_open_bracket);
+		if (try_consume(symbol_period)) {
+			// TODO: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
+			consume(symbol_id);
+		} else if (try_consume(symbol_open_bracket)) {
+			// TODO: Verificar se entry é um vetor
 			expr();
-			recognize(symbol_close_bracket);
+			if (!consume(symbol_close_bracket));
+				// TODO: Apontar qual símbolo de abertura está sobressalente
+		} else {
+			// Sincroniza
+			mark(error_parser, "Invalid selector.");
+			while (!is_follow("selector", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+				scan();
 		}
 	}
+	return entry->address;
 }
 
 // factor = id selector | number | "(" expr ")" | "~" factor
 void factor()
 {
-	switch (current_token.lexem.symbol) {
-		case symbol_id:
-			verify(symbol_id);
-			entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
-			if (!entry) {
-				mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
-				scan();
-			}
-			else {
-				scan();
-				selector(&entry);
-				load(entry->address);
-			}
-			break;
-		case symbol_number:
-			verify(symbol_number);
-			load_immediate(current_token.value);
+	if (try_assert(symbol_id)) {
+		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
+		if (!entry) {
+			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
 			scan();
-			break;
-		case symbol_open_paren:
-			recognize(symbol_open_paren);
-			expr();
-			recognize(symbol_close_paren);
-			break;
-		case symbol_not:
-			recognize(symbol_not);
-			factor();
-			break;
-		default:
-			// Sincroniza
-			mark(error_parser, "Missing factor.");
-			while (!is_follow("factor", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
-				scan();
-			break;
+		} else {
+			scan();
+			write_load(selector(entry));
+		}
+	} else if (try_assert(symbol_number)) {
+		write_load_immediate(current_token.value);
+		scan();
+	} else if (try_consume(symbol_open_paren)) {
+		expr();
+		if (!consume(symbol_close_paren));
+			// TODO: Apontar qual símbolo de abertura está sobressalente
+	} else if (try_consume(symbol_not)) {
+		factor();
+		// TODO: Adicionar operação lógica inversora
+	} else {
+		// Sincroniza
+		mark(error_parser, "Missing factor.");
+		while (!is_follow("factor", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+			scan();
 	}
 }
 
@@ -170,20 +173,13 @@ void factor()
 void term()
 {
 	factor();
-	while (current_token.lexem.symbol >= symbol_times && current_token.lexem.symbol <= symbol_and) {
-		switch (current_token.lexem.symbol) {
-			case symbol_times:
-				break;
-			case symbol_div:
-				break;
-			case symbol_mod:
-				break;
-			case symbol_and:
-				break;
-			default:
-				break;
-		}
-		recognize(current_token.lexem.symbol); 
+	while (true) {
+		if (try_consume(symbol_times)) {
+		} else if (try_consume(symbol_div)) {
+		} else if (try_consume(symbol_mod)) {
+		} else if (try_consume(symbol_and)) {
+		} else
+			break;
 		factor();
 	}
 }
@@ -191,23 +187,15 @@ void term()
 // simple_expr = ["+" | "-"] term {("+" | "-" | "OR") term}
 void simple_expr()
 {
-	if (current_token.lexem.symbol == symbol_plus)
-		recognize(symbol_plus);
-	else if (current_token.lexem.symbol == symbol_minus)
-		recognize(symbol_minus);
+	if (try_consume(symbol_plus));
+	else if (try_consume(symbol_minus));
 	term();
-	while (current_token.lexem.symbol >= symbol_plus && current_token.lexem.symbol <= symbol_or) {
-		switch (current_token.lexem.symbol) {
-			case symbol_plus:
-				break;
-			case symbol_minus:
-				break;
-			case symbol_or:
-				break;
-			default:
-				break;
-		}
-		recognize(current_token.lexem.symbol); 
+	while (true) {
+		if (try_consume(symbol_plus)) {
+		} else if (try_consume(symbol_minus)) {
+		} else if (try_consume(symbol_or)) {
+		} else
+			break;
 		term();
 	}
 }
@@ -216,48 +204,36 @@ void simple_expr()
 void expr()
 {
 	simple_expr();
-	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater) {
-		switch (current_token.lexem.symbol) {
-			case symbol_equal:
-				break;
-			case symbol_not_equal:
-				break;
-			case symbol_less:
-				break;
-			case symbol_less_equal:
-				break;
-			case symbol_greater:
-				break;
-			case symbol_greater_equal:
-				break;
-			default:
-				break;
-		}
-		recognize(current_token.lexem.symbol);
-		simple_expr();
-	}
+	if (try_consume(symbol_equal)) {
+	} else if (try_consume(symbol_not_equal)) {
+	} else if (try_consume(symbol_less)) {
+	} else if (try_consume(symbol_less_equal)) {
+	} else if (try_consume(symbol_greater)) {
+	} else if (try_consume(symbol_greater_equal)) {
+	} else
+		return;
+	simple_expr();
 }
 
 // assignment = ":=" expr
 void assignment(entry_t *entry)
 {
-	recognize(symbol_becomes);
+	try_consume(symbol_becomes);
 	expr();
-	// FAZER: Adicionar o armazenamento do resultado
+	// TODO: Adicionar o armazenamento do resultado
 }
 
 // actual_params = "(" [expr {"," expr}] ")"
 void actual_params()
 {
-	recognize(symbol_open_paren);
+	try_consume(symbol_open_paren);
 	if (is_first("expr", current_token.lexem.symbol)) {
 		expr();
-		while (current_token.lexem.symbol == symbol_comma) {
-			recognize(symbol_comma);
+		while (try_consume(symbol_comma))
 			expr();
-		}
 	}
-	recognize(symbol_close_paren);
+	if (!consume(symbol_close_paren));
+		// TODO: Apontar qual símbolo de abertura está sobressalente
 }
 
 // proc_call = [actual_params]
@@ -272,48 +248,44 @@ void stmt_sequence();
 // if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 void if_stmt()
 {
-	recognize(symbol_if);
+	try_consume(symbol_if);
 	expr();
-	recognize(symbol_then);
+	consume(symbol_then);
 	stmt_sequence();
-	while (current_token.lexem.symbol == symbol_elsif) {
-		recognize(symbol_elsif);
+	while (try_consume(symbol_elsif)) {
 		expr();
-		recognize(symbol_then);
+		consume(symbol_then);
 		stmt_sequence();
 	}
-	if (current_token.lexem.symbol == symbol_else) {
-		recognize(symbol_else);
+	if (try_consume(symbol_else))
 		stmt_sequence();
-	}
-	recognize(symbol_end);
+	consume(symbol_end);
 }
 
 // while_stmt = "while" expr "do" stmt_sequence "end"
 void while_stmt()
 {
-	recognize(symbol_while);
+	try_consume(symbol_while);
 	expr();
-	recognize(symbol_do);
+	consume(symbol_do);
 	stmt_sequence();
-	recognize(symbol_end);
+	consume(symbol_end);
 }
 
 // repeat_stmt = "repeat" stmt_sequence "until" expr
 void repeat_stmt()
 {
-	recognize(symbol_repeat);
+	try_consume(symbol_repeat);
 	stmt_sequence();
-	recognize(symbol_until);
+	consume(symbol_until);
 	expr();
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 void stmt()
 {
-	if (current_token.lexem.symbol == symbol_id) {
-		recognize(symbol_id);
-		// FAZER: Adicionar geração de código e obtenção da entrada na tabela de símbolos
+	if (try_consume(symbol_id)) {
+		// TODO: Adicionar geração de código e obtenção da entrada na tabela de símbolos
 		selector(NULL);
 		if (is_first("assignment", current_token.lexem.symbol))
 			assignment(NULL);
@@ -343,21 +315,18 @@ void stmt()
 void stmt_sequence()
 {
 	stmt();
-	while (current_token.lexem.symbol == symbol_semicolon) {
-		recognize(symbol_semicolon);
+	while (try_consume(symbol_semicolon))
 		stmt();
-	}
 }
 
 // id_list = id {"," id}
 entry_t *id_list()
 {
-	verify(symbol_id);
+	try_assert(symbol_id);
 	entry_t *new_entries = create_entry(current_token.lexem.id, current_token.position, class_var);
 	scan();
-	while (current_token.lexem.symbol == symbol_comma) {
-		recognize(symbol_comma);
-		if (verify(symbol_id)) {
+	while (try_consume(symbol_comma)) {
+		if (assert(symbol_id)) {
 			append_entry(create_entry(current_token.lexem.id, current_token.position, class_var), &new_entries);
 			scan();
 		}
@@ -371,15 +340,15 @@ type_t *type();
 type_t *array_type()
 {
 	type_t *new_type = NULL;
-	recognize(symbol_array);
+	try_consume(symbol_array);
 	new_type = create_type(form_array, 0, 0, NULL, NULL);
 	//	expr();
 	value_t length = 0;
-	if (verify(symbol_number)) {
+	if (assert(symbol_number)) {
 		length = current_token.value;
 		scan();
 	}
-	recognize(symbol_of);
+	consume(symbol_of);
 	type_t *base_type = type();
 	unsigned int size = 0;
 	if (base_type)
@@ -397,7 +366,7 @@ entry_t *field_list()
 {
 	if (is_first("id_list", current_token.lexem.symbol)) {
 		entry_t *new_fields = id_list();
-		recognize(symbol_colon);
+		consume(symbol_colon);
 		type_t *base_type = type();
 		entry_t *e = new_fields;
 		while (e) {
@@ -413,11 +382,10 @@ entry_t *field_list()
 type_t *record_type()
 {
 	type_t *new_type = NULL;
-	recognize(symbol_record);
+	try_consume(symbol_record);
 	new_type = create_type(form_record, 0, 0, NULL, NULL);
 	entry_t *fields = field_list();
-	while (current_token.lexem.symbol == symbol_semicolon) {
-		recognize(symbol_semicolon);
+	while (try_consume(symbol_semicolon)) {
 		entry_t *more_fields = field_list();
 		if (fields && more_fields)
 			append_entry(more_fields, &fields);
@@ -434,7 +402,7 @@ type_t *record_type()
 			e = e->next;
 		}
 	}
-	recognize(symbol_end);
+	consume(symbol_end);
 	if (new_type) {
 		new_type->size = size;
 		new_type->fields = fields;
@@ -445,17 +413,17 @@ type_t *record_type()
 // type = id | array_type | record_type
 type_t *type()
 {
-	if (current_token.lexem.symbol == symbol_id) {
+	if (try_assert(symbol_id)) {
 		// Qualquer tipo atômico deve ser baseado em um dos tipos internos da linguagem (neste caso apenas “integer”)
-		verify(symbol_id);
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
 		if (entry) {
 			scan();
 			return entry->type;
+		} else {
+			mark(error_parser, "Unknown type \"%s\".", current_token.lexem.id);
+			scan();
+			return NULL;
 		}
-		else
-			mark_at(error_parser, current_token.position, "Unknown type \"%s\".", current_token.lexem.id);
-		scan();
 	} else if (is_first("array_type", current_token.lexem.symbol)) {
 		type_t *new_type = array_type();
 		if (!new_type)
@@ -477,10 +445,11 @@ type_t *type()
 // formal_params_section = ["var"] id_list ":" type
 entry_t *formal_params_section()
 {
-	if (current_token.lexem.symbol == symbol_var)
-		recognize(symbol_var);
+	if (try_consume(symbol_var));
+		// TODO: Implementar a passagem de parâmetro por referência
 	entry_t *new_params = id_list();
-	recognize(symbol_colon);
+	if (!consume(symbol_colon))
+		mark_missing(symbol_colon);
 	type_t *base_type = type();
 	entry_t *e = new_params;
 	while (e) {
@@ -494,24 +463,22 @@ entry_t *formal_params_section()
 entry_t *formal_params()
 {
 	entry_t *params = NULL;
-	recognize(symbol_open_paren);
+	try_consume(symbol_open_paren);
 	if (is_first("formal_params_section", current_token.lexem.symbol)) {
 		params = formal_params_section();
-		while (current_token.lexem.symbol == symbol_semicolon) {
-			recognize(symbol_semicolon);
+		while (try_consume(symbol_semicolon))
 			append_entry(formal_params_section(), &params);
-		}
 	}
-	recognize(symbol_close_paren);
+	consume(symbol_close_paren);
 	return params;
 }
 
 // proc_head = "procedure" id [formal_params]
 void proc_head()
 {
-	recognize(symbol_proc);
-	recognize(symbol_id);
-	// FAZER: Implementar parâmetros para a entrada do procedimento na tabela de símbolos
+	try_consume(symbol_proc);
+	consume(symbol_id);
+	// TODO: Implementar parâmetros para a entrada do procedimento na tabela de símbolos
 	if (is_first("formal_params", current_token.lexem.symbol))
 		formal_params();
 }
@@ -522,19 +489,17 @@ void declarations();
 void proc_body()
 {
 	declarations();
-	if (current_token.lexem.symbol == symbol_begin) {
-		recognize(symbol_begin);
+	if (try_consume(symbol_begin))
 		stmt_sequence();
-	}
-	recognize(symbol_end);
-	recognize(symbol_id);
+	consume(symbol_end);
+	consume(symbol_id);
 }
 
 // proc_decl = proc_head ";" proc_body
 void proc_decl()
 {
 	proc_head();
-	recognize(symbol_semicolon);
+	consume(symbol_semicolon);
 	proc_body();
 }
 
@@ -556,50 +521,48 @@ void proc_decl()
 // const_decl = "const" {id "=" expr ";"}
 void const_decl()
 {
-	recognize(symbol_const);
-	while (current_token.lexem.symbol == symbol_id) {
-		verify(symbol_id);
+	try_consume(symbol_const);
+	while (try_assert(symbol_id)) {
 		entry_t *new_entry = create_entry(current_token.lexem.id, current_token.position, class_const);
 		scan();
-		recognize(symbol_equal);
+		consume(symbol_equal);
 		// expr();
-		if (verify(symbol_number)) {
+		if (assert(symbol_number)) {
 			if (new_entry) {
 				new_entry->value = current_token.value;
 				append_entry(new_entry, &symbol_table);
 			}
 			scan();
 		}
-		recognize(symbol_semicolon);
+		consume(symbol_semicolon);
 	}
 }
 
 // type_decl = "type" {id "=" type ";"}
 void type_decl()
 {
-	recognize(symbol_type);
-	while (current_token.lexem.symbol == symbol_id) {
-		verify(symbol_id);
+	try_consume(symbol_type);
+	while (try_assert(symbol_id)) {
 		entry_t *new_entry = create_entry(current_token.lexem.id, current_token.position, class_type);
 		scan();
-		// FAZER: Melhorar erro para o “igual”
-		recognize(symbol_equal);
+		// TODO: Melhorar erro para o “igual”
+		consume(symbol_equal);
 		type_t *base = type();
 		if (new_entry && base) {
 			new_entry->type = base;
 			append_entry(new_entry, &symbol_table);
 		}
-		recognize(symbol_semicolon);
+		consume(symbol_semicolon);
 	}
 }
 
 // var_decl = "var" {id_list ":" type ";"}
 void var_decl()
 {
-	recognize(symbol_var);
+	try_consume(symbol_var);
 	while (is_first("id_list", current_token.lexem.symbol)) {
 		entry_t *new_entries = id_list();
-		recognize(symbol_colon);
+		consume(symbol_colon);
 		type_t *base = type();
 		entry_t *e = new_entries;
 		while (e && base) {
@@ -609,7 +572,7 @@ void var_decl()
 			e = e->next;
 		}
 		append_entry(new_entries, &symbol_table);
-		recognize(symbol_semicolon);
+		consume(symbol_semicolon);
 	}
 }
 
@@ -624,24 +587,22 @@ void declarations()
 			var_decl();
 	while (is_first("proc_decl", current_token.lexem.symbol)) {
 		proc_decl();
-		recognize(symbol_semicolon);
+		consume(symbol_semicolon);
 	}
 }
 
 // module = "module" id ";" declarations ["begin" stmt_sequence] "end" id "."
 void module()
 {
-	recognize(symbol_module);
-	recognize(symbol_id);
-	recognize(symbol_semicolon);
+	consume(symbol_module);
+	consume(symbol_id);
+	consume(symbol_semicolon);
 	declarations();
-	if (current_token.lexem.symbol == symbol_begin) {
-		recognize(symbol_begin);
+	if (try_consume(symbol_begin))
 		stmt_sequence();
-	}
-	recognize(symbol_end);
-	recognize(symbol_id);
-	recognize(symbol_period);
+	consume(symbol_end);
+	consume(symbol_id);
+	consume(symbol_period);
 }
 
 // Retorna se a inicialização do analisador léxico e da tabela de símbolos obteve sucesso ou não e se o arquivo de 

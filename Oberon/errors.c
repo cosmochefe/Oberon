@@ -53,7 +53,7 @@ void mark_at(const error_t error, const position_t position, const char *message
 	printf("\n");
 }
 
-// FAZER: Evitar duplicação de código!
+// TODO: Evitar duplicação de código!
 void mark(const error_t error, const char *message, ...)
 {
 	if (error > error_warning)
@@ -86,4 +86,14 @@ void mark(const error_t error, const char *message, ...)
 	vprintf(message, args);
 	va_end(args);
 	printf("\n");
+}
+
+void mark_missing(symbol_t symbol)
+{
+	if (symbol == symbol_id)
+		mark(error_parser, "Missing identifier.");
+	else if (symbol == symbol_number)
+		mark(error_parser, "Missing number.");
+	else
+		mark(error_parser, "Missing \"%s\".", id_for_symbol(symbol));
 }

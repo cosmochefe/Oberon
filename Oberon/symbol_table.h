@@ -47,7 +47,7 @@ typedef struct _entry {
 	struct _entry *next;
 } entry_t;
 
-// FAZER: Adicionar árvore de tabelas para gerenciar escopo
+// TODO: Adicionar árvore de tabelas para gerenciar escopo
 
 extern entry_t *symbol_table;
 extern address_t current_address;

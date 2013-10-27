@@ -74,7 +74,7 @@ entry_t *create_entry(identifier_t id, position_t position, class_t class)
 
 void clear_table(entry_t **ref)
 {
-	// FAZER: Verificar quais tipos de entradas na tabela devem ser removidos primeiro
+	// TODO: Verificar quais tipos de entradas na tabela devem ser removidos primeiro
 	// Pode haver um problema ao liberar a memória para um “type” e este ainda ter referências para si
 	// em outras entradas. Contagem de referências seria uma solução…
 	entry_t *table = *ref;
