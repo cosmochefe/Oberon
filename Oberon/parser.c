@@ -124,11 +124,15 @@ address_t selector(entry_t *entry)
 		if (try_consume(symbol_period)) {
 			// TODO: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
 			consume(symbol_id);
-		} else if (try_consume(symbol_open_bracket)) {
+		} else if (try_assert(symbol_open_bracket)) {
+			position_t open_position = current_token.position;
+			scan();
 			// TODO: Verificar se entry é um vetor
 			expr();
-			if (!consume(symbol_close_bracket));
-				// TODO: Apontar qual símbolo de abertura está sobressalente
+			if (try_assert(symbol_close_bracket))
+				scan();
+			else
+				mark(error_parser, "Missing closing bracket for (%d, %d).", open_position.line, open_position.column);
 		} else {
 			// Sincroniza
 			mark(error_parser, "Invalid selector.");
@@ -154,10 +158,14 @@ void factor()
 	} else if (try_assert(symbol_number)) {
 		write_load_immediate(current_token.value);
 		scan();
-	} else if (try_consume(symbol_open_paren)) {
+	} else if (try_assert(symbol_open_paren)) {
+		position_t open_position = current_token.position;
+		scan();
 		expr();
-		if (!consume(symbol_close_paren));
-			// TODO: Apontar qual símbolo de abertura está sobressalente
+		if (try_assert(symbol_close_paren))
+			scan();
+		else
+			mark(error_parser, "Missing closing parentheses for (%d, %d).", open_position.line, open_position.column);
 	} else if (try_consume(symbol_not)) {
 		factor();
 		// TODO: Adicionar operação lógica inversora
@@ -173,14 +181,11 @@ void factor()
 void term()
 {
 	factor();
-	while (true) {
-		if (try_consume(symbol_times)) {
-		} else if (try_consume(symbol_div)) {
-		} else if (try_consume(symbol_mod)) {
-		} else if (try_consume(symbol_and)) {
-		} else
-			break;
+	while (current_token.lexem.symbol >= symbol_times && current_token.lexem.symbol <= symbol_and) {
+		symbol_t symbol = current_token.lexem.symbol;
+		consume(symbol);
 		factor();
+		write_binary_op(symbol);
 	}
 }
 
@@ -190,13 +195,11 @@ void simple_expr()
 	if (try_consume(symbol_plus));
 	else if (try_consume(symbol_minus));
 	term();
-	while (true) {
-		if (try_consume(symbol_plus)) {
-		} else if (try_consume(symbol_minus)) {
-		} else if (try_consume(symbol_or)) {
-		} else
-			break;
+	while (current_token.lexem.symbol >= symbol_plus && current_token.lexem.symbol <= symbol_or) {
+		symbol_t symbol = current_token.lexem.symbol;
+		consume(symbol);
 		term();
+		write_binary_op(symbol);
 	}
 }
 
@@ -204,15 +207,12 @@ void simple_expr()
 void expr()
 {
 	simple_expr();
-	if (try_consume(symbol_equal)) {
-	} else if (try_consume(symbol_not_equal)) {
-	} else if (try_consume(symbol_less)) {
-	} else if (try_consume(symbol_less_equal)) {
-	} else if (try_consume(symbol_greater)) {
-	} else if (try_consume(symbol_greater_equal)) {
-	} else
-		return;
-	simple_expr();
+	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater_equal) {
+		symbol_t symbol = current_token.lexem.symbol;
+		consume(symbol);
+		simple_expr();
+		// TODO: Adicionar comparação
+	}
 }
 
 // assignment = ":=" expr
@@ -220,20 +220,25 @@ void assignment(entry_t *entry)
 {
 	try_consume(symbol_becomes);
 	expr();
-	// TODO: Adicionar o armazenamento do resultado
+	if (entry)
+		write_store(entry->address);
 }
 
 // actual_params = "(" [expr {"," expr}] ")"
 void actual_params()
 {
-	try_consume(symbol_open_paren);
+	try_assert(symbol_open_paren);
+	position_t open_position = current_token.position;
+	scan();
 	if (is_first("expr", current_token.lexem.symbol)) {
 		expr();
 		while (try_consume(symbol_comma))
 			expr();
 	}
-	if (!consume(symbol_close_paren));
-		// TODO: Apontar qual símbolo de abertura está sobressalente
+	if (try_assert(symbol_close_paren))
+		scan();
+	else
+		mark(error_parser, "Missing closing parentheses for (%d, %d).", open_position.line, open_position.column);
 }
 
 // proc_call = [actual_params]
@@ -284,11 +289,13 @@ void repeat_stmt()
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 void stmt()
 {
-	if (try_consume(symbol_id)) {
-		// TODO: Adicionar geração de código e obtenção da entrada na tabela de símbolos
-		selector(NULL);
+	if (try_assert(symbol_id)) {
+		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
+		if (!entry)
+			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
+		scan();
 		if (is_first("assignment", current_token.lexem.symbol))
-			assignment(NULL);
+			assignment(entry);
 		else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol))
 			proc_call();
 		else {

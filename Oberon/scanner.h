@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "backend.h"
-
 #define SCANNER_MAX_ID_LENGTH 16
 
 typedef enum _symbol {
@@ -28,9 +26,9 @@ typedef enum _symbol {
 	symbol_equal = 9,
 	symbol_not_equal = 10,
 	symbol_less = 11,
-	symbol_less_equal = 13,
-	symbol_greater = 14,
-	symbol_greater_equal = 12,
+	symbol_less_equal = 12,
+	symbol_greater = 13,
+	symbol_greater_equal = 14,
 	symbol_period = 18,
 	symbol_comma = 19,
 	symbol_colon = 20,
@@ -63,6 +61,8 @@ typedef enum _symbol {
 	symbol_module = 63,
 	symbol_eof = 64
 } symbol_t;
+
+#include "backend.h"
 
 typedef char identifier_t[SCANNER_MAX_ID_LENGTH + 1];
 

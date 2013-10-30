@@ -15,10 +15,14 @@
 typedef unsigned char value_t;
 typedef unsigned short address_t;
 
+#include "scanner.h"
+
 void initialize_backend(FILE *file);
 
 void write_load(address_t address);
 void write_load_immediate(value_t value);
 void write_store(address_t address);
+void write_binary_op(symbol_t symbol);
+void write_negate();
 
 #endif

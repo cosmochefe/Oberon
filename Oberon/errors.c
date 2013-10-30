@@ -41,7 +41,7 @@ void mark_at(const error_t error, const position_t position, const char *message
 		case error_parser:
 			printf("Error at "); break;
 		case error_fatal:
-			printf("What are you freaking doing at "); break;
+			printf("What are you freaking doing? "); break;
 		default:
 			printf("Whaaaaaat?! at "); break;
 	}
@@ -51,6 +51,8 @@ void mark_at(const error_t error, const position_t position, const char *message
 	vprintf(message, args);
 	va_end(args);
 	printf("\n");
+	if (error == error_fatal)
+		exit(EXIT_FAILURE);
 }
 
 // TODO: Evitar duplicação de código!
@@ -76,7 +78,7 @@ void mark(const error_t error, const char *message, ...)
 		case error_parser:
 			printf("Error at "); break;
 		case error_fatal:
-			printf("What are you freaking doing at "); break;
+			printf("What are you freaking doing? "); break;
 		default:
 			printf("Whaaaaaat?! at "); break;
 	}
@@ -86,6 +88,8 @@ void mark(const error_t error, const char *message, ...)
 	vprintf(message, args);
 	va_end(args);
 	printf("\n");
+	if (error == error_fatal)
+		exit(EXIT_FAILURE);
 }
 
 void mark_missing(symbol_t symbol)
