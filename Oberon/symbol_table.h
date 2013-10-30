@@ -47,6 +47,20 @@ typedef struct _entry {
 	struct _entry *next;
 } entry_t;
 
+typedef enum _addressing {
+	addressing_direct,
+	addressing_immediate,
+	addressing_register
+} addressing_t;
+
+typedef struct _item {
+	addressing_t addressing;
+	type_t type;
+	address_t address;	 // Para variáveis na memória
+	value_t value;			 // Para constantes
+	unsigned char index; // Para registradores
+} item_t;
+
 // TODO: Adicionar árvore de tabelas para gerenciar escopo
 
 extern entry_t *symbol_table;
