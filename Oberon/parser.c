@@ -299,16 +299,15 @@ void repeat_stmt()
 	expr(NULL);
 }
 
-void write_store(address_t address);
+void write_store(item_t *dest, item_t *orig);
 
 // assignment = ":=" expr
-void assignment(entry_t *entry)
+void assignment(item_t *dest)
 {
 	try_consume(symbol_becomes);
-	item_t item;
-	expr(&item);
-	if (entry)
-		write_store(entry->address);
+	item_t orig;
+	expr(&orig);
+	write_store(dest, &orig);
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
@@ -321,17 +320,20 @@ void stmt()
 		position_t position = current_token.position;
 		scan();
 		selector(entry);
-		symbol_t symbol = current_token.lexem.symbol;
-		if (is_first("assignment", symbol)) {
+		if (is_first("assignment", current_token.lexem.symbol)) {
 			if (entry->class != class_var)
 				mark_at(error_parser, position, "\"%s\" is not a variable.", entry->id);
-			assignment(entry);
-		} else if (is_first("proc_call", symbol) || is_follow("proc_call", symbol)) {
+			item_t dest;
+			dest.addressing = addressing_direct;
+			dest.address = entry->address;
+			dest.type = entry->type;
+			assignment(&dest);
+		} else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol)) {
 			proc_call(entry);
 		} else {
-			// Sincroniza
 			mark(error_parser, "Invalid statement.");
-			while (!is_follow("stmt", symbol) && symbol != symbol_eof)
+			// Sincroniza
+			while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
 				scan();
 		}
 	}	else if (is_first("if_stmt", current_token.lexem.symbol)) {

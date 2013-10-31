@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <strings.h>
 
 #include "backend.h"
@@ -25,32 +26,45 @@ void initialize_backend(FILE *file)
 	output_file = file;
 }
 
-void write_load(address_t address)
+void write_load(item_t *item)
 {
-	fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, address);
+	if (item->addressing == addressing_immediate)
+		fprintf(output_file, "\tLOAD R%d, %d\n", register_index, item->value);
+	else if (item->addressing == addressing_direct)
+		fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, item->address);
+	else
+		return; // TODO: Devo verificar e apontar erro ou deixar como está?
+	item->addressing = addressing_register;
+	item->index = register_index;
 	register_index++;
-	if (register_index > REGISTER_INDEX_MAX)
-		mark_at(error_fatal, position_zero, "Waaaaay too many registers needed. Sorry, no can do!");
 }
 
-void write_load_immediate(value_t value)
+void write_store(item_t *dest, item_t *orig)
 {
-	fprintf(output_file, "\tLOAD R%d, %d\n", register_index, value);
-	register_index++;
-	if (register_index > REGISTER_INDEX_MAX)
-		mark_at(error_fatal, position_zero, "Waaaaay too many registers needed. Sorry, no can do!");
-}
-
-void write_store(address_t address)
-{
-	register_index--;
-	if (register_index < 0)
-		mark_at(error_fatal, position_zero, "Negative indexes are as rare as white flies, you know?");
-	fprintf(output_file, "\tSTORE [%.4X], R%d\n", address, register_index);
+	// Se o item de origem já estiver em um registrador, a função “write_load” não mudará nada
+	write_load(orig);
+	fprintf(output_file, "\tSTORE [%.4X], R%d\n", dest->address, orig->index);
 }
 
 void write_unary_op(symbol_t symbol, item_t *item)
 {
+	if (symbol == symbol_minus) {
+		// Se o item for uma constante, o próprio compilador pode fazer a conta e continuar o processo
+		if (item->addressing == addressing_immediate) {
+			item->value = -item->value;
+			return;
+		}
+		write_load(item);
+		fprintf(output_file, "\tNEG R%d\n", item->index);
+	} else if (symbol == symbol_not) {
+		if (item->addressing == addressing_immediate) {
+			item->value = ~item->value;
+			return;
+		}
+		write_load(item);
+		fprintf(output_file, "\tNOT R%d\n", item->index);
+	}
+	// TODO: Verificar operadores unários inválidos
 }
 
 void write_binary_op(symbol_t symbol, item_t *first, item_t *second)
