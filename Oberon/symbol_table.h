@@ -15,9 +15,10 @@
 #include "scanner.h"
 
 typedef enum _class {
+	class_unknown,
+	class_var,
 	class_const,
 	class_type,
-	class_var,
 	class_proc
 } class_t;
 
@@ -48,6 +49,7 @@ typedef struct _entry {
 } entry_t;
 
 typedef enum _addressing {
+	addressing_unknown,
 	addressing_direct,
 	addressing_immediate,
 	addressing_register
@@ -55,7 +57,7 @@ typedef enum _addressing {
 
 typedef struct _item {
 	addressing_t addressing;
-	type_t type;
+	struct _type *type;
 	address_t address;	 // Para variáveis na memória
 	value_t value;			 // Para constantes
 	unsigned char index; // Para registradores

@@ -64,6 +64,8 @@ typedef enum _symbol {
 
 #include "backend.h"
 
+// TODO: Organizar esta bagunça. Simplificar!
+
 typedef char identifier_t[SCANNER_MAX_ID_LENGTH + 1];
 
 typedef struct _position {

@@ -49,30 +49,29 @@ void write_store(address_t address)
 	fprintf(output_file, "\tSTORE [%.4X], R%d\n", address, register_index);
 }
 
-void write_binary_op(symbol_t symbol)
+void write_unary_op(symbol_t symbol, item_t *item)
 {
-	register_index--;
-	if (register_index < 1)
-		mark_at(error_fatal, position_zero, "Negative indexes are as rare as white flies, you know?");
-	char mnemonic[] = "NOP";
-	if (symbol == symbol_plus)
-		strcpy(mnemonic, "ADD");
-	else if (symbol == symbol_minus)
-		strcpy(mnemonic, "SUB");
-	else if (symbol == symbol_times)
-		strcpy(mnemonic, "MUL");
-	else if (symbol == symbol_div)
-		strcpy(mnemonic, "DIV");
-	else if (symbol == symbol_mod)
-		strcpy(mnemonic, "MOD");
-	else if (symbol == symbol_or)
-		strcpy(mnemonic, "OR");
-	else if (symbol == symbol_and)
-		strcpy(mnemonic, "AND");
-	fprintf(output_file, "\t%s R%d, R%d\n", mnemonic, register_index - 1, register_index);
 }
 
-void write_negate()
+void write_binary_op(symbol_t symbol, item_t *first, item_t *second)
 {
-	
+//	register_index--;
+//	if (register_index < 1)
+//		mark_at(error_fatal, position_zero, "Negative indexes are as rare as white flies, you know?");
+//	char mnemonic[] = "NOP";
+//	if (op == op_add)
+//		strcpy(mnemonic, "ADD");
+//	else if (op == op_sub)
+//		strcpy(mnemonic, "SUB");
+//	else if (op == op_mul)
+//		strcpy(mnemonic, "MUL");
+//	else if (op == op_div)
+//		strcpy(mnemonic, "DIV");
+//	else if (op == op_mod)
+//		strcpy(mnemonic, "MOD");
+//	else if (op == op_and)
+//		strcpy(mnemonic, "AND");
+//	else if (op == op_or)
+//		strcpy(mnemonic, "OR");
+//	fprintf(output_file, "\t%s R%d, R%d\n", mnemonic, register_index - 1, register_index);
 }

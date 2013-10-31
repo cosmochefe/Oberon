@@ -113,13 +113,13 @@ static inline bool try_consume(symbol_t symbol)
 	return verify(symbol, false, true);
 }
 
-void expr();
+void expr(item_t *item);
 
 // selector = {"." id | "[" expr "]"}
-address_t selector(entry_t *entry)
+void selector(entry_t *entry)
 {
 	if (!entry)
-		return 0;
+		return;
 	while (is_first("selector", current_token.lexem.symbol)) {
 		if (try_consume(symbol_period)) {
 			// TODO: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
@@ -128,7 +128,7 @@ address_t selector(entry_t *entry)
 			position_t open_position = current_token.position;
 			scan();
 			// TODO: Verificar se entry é um vetor
-			expr();
+			expr(NULL);
 			if (try_assert(symbol_close_bracket))
 				scan();
 			else
@@ -140,35 +140,47 @@ address_t selector(entry_t *entry)
 				scan();
 		}
 	}
-	return entry->address;
 }
 
+void write_unary_op(symbol_t symbol, item_t *item);
+
 // factor = id selector | number | "(" expr ")" | "~" factor
-void factor()
+void factor(item_t *item)
 {
-	if (try_assert(symbol_id)) {
+	if (try_assert(symbol_id)) { // Identificadores (constantes, variáveis e procedimentos)
+		item->addressing = addressing_unknown;
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
-		if (!entry) {
+		if (!entry)
 			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
-			scan();
-		} else {
-			scan();
-			write_load(selector(entry));
+		else {
+			item->addressing = (addressing_t)entry->class;
+			// Como a tabela de símbolos armazena tanto variáveis e constantes, quanto tipos e procedimentos, é possível que o
+			// identificador encontrado não seja útil
+			if (entry->class == class_var) {
+				item->address = entry->address;
+				item->type = entry->type;
+			} else if (entry->class == class_const)
+				item->value = entry->value;
+			else
+				mark(error_parser, "\"%s\" is not a valid factor.", current_token.lexem.id);
 		}
-	} else if (try_assert(symbol_number)) {
-		write_load_immediate(current_token.value);
 		scan();
-	} else if (try_assert(symbol_open_paren)) {
+		selector(entry);
+	} else if (try_assert(symbol_number)) { // Numerais
+		item->addressing = addressing_immediate;
+		item->value = current_token.value;
+		scan();
+	} else if (try_assert(symbol_open_paren)) { // Subexpressões
 		position_t open_position = current_token.position;
 		scan();
-		expr();
+		expr(item);
 		if (try_assert(symbol_close_paren))
 			scan();
 		else
 			mark(error_parser, "Missing closing parentheses for (%d, %d).", open_position.line, open_position.column);
-	} else if (try_consume(symbol_not)) {
-		factor();
-		// TODO: Adicionar operação lógica inversora
+	} else if (try_consume(symbol_not)) { // Inversão lógica de outro fator
+		factor(item);
+		write_unary_op(symbol_not, item);
 	} else {
 		// Sincroniza
 		mark(error_parser, "Missing factor.");
@@ -177,51 +189,52 @@ void factor()
 	}
 }
 
+void write_binary_op(symbol_t symbol, item_t *first, item_t *second);
+
 // term = factor {("*" | "div" | "mod" | "&") factor}
-void term()
+void term(item_t *first)
 {
-	factor();
+	factor(first);
 	while (current_token.lexem.symbol >= symbol_times && current_token.lexem.symbol <= symbol_and) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		factor();
-		write_binary_op(symbol);
+		item_t second;
+		factor(&second);
+		write_binary_op(symbol, first, &second);
 	}
 }
 
 // simple_expr = ["+" | "-"] term {("+" | "-" | "OR") term}
-void simple_expr()
+void simple_expr(item_t *first)
 {
-	if (try_consume(symbol_plus));
-	else if (try_consume(symbol_minus));
-	term();
+	if (try_consume(symbol_plus)) {
+		term(first);
+	} else if (try_consume(symbol_minus)) {
+		term(first);
+		write_unary_op(symbol_minus, first);
+	} else {
+		term(first);
+	}
 	while (current_token.lexem.symbol >= symbol_plus && current_token.lexem.symbol <= symbol_or) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		term();
-		write_binary_op(symbol);
+		item_t second;
+		term(&second);
+		write_binary_op(symbol, first, &second);
 	}
 }
 
 // expr = simple_expr [("=" | "#" | "<" | "<=" | ">" | ">=") simple_expr]
-void expr()
+void expr(item_t *first)
 {
-	simple_expr();
+	simple_expr(first);
 	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater_equal) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		simple_expr();
+		item_t second;
+		simple_expr(&second);
 		// TODO: Adicionar comparação
 	}
-}
-
-// assignment = ":=" expr
-void assignment(entry_t *entry)
-{
-	try_consume(symbol_becomes);
-	expr();
-	if (entry)
-		write_store(entry->address);
 }
 
 // actual_params = "(" [expr {"," expr}] ")"
@@ -231,9 +244,9 @@ void actual_params()
 	position_t open_position = current_token.position;
 	scan();
 	if (is_first("expr", current_token.lexem.symbol)) {
-		expr();
+		expr(NULL);
 		while (try_consume(symbol_comma))
-			expr();
+			expr(NULL);
 	}
 	if (try_assert(symbol_close_paren))
 		scan();
@@ -242,7 +255,7 @@ void actual_params()
 }
 
 // proc_call = [actual_params]
-void proc_call()
+void proc_call(entry_t *entry)
 {
 	if (is_first("actual_params", current_token.lexem.symbol))
 		actual_params();
@@ -254,11 +267,11 @@ void stmt_sequence();
 void if_stmt()
 {
 	try_consume(symbol_if);
-	expr();
+	expr(NULL);
 	consume(symbol_then);
 	stmt_sequence();
 	while (try_consume(symbol_elsif)) {
-		expr();
+		expr(NULL);
 		consume(symbol_then);
 		stmt_sequence();
 	}
@@ -271,7 +284,7 @@ void if_stmt()
 void while_stmt()
 {
 	try_consume(symbol_while);
-	expr();
+	expr(NULL);
 	consume(symbol_do);
 	stmt_sequence();
 	consume(symbol_end);
@@ -283,7 +296,19 @@ void repeat_stmt()
 	try_consume(symbol_repeat);
 	stmt_sequence();
 	consume(symbol_until);
-	expr();
+	expr(NULL);
+}
+
+void write_store(address_t address);
+
+// assignment = ":=" expr
+void assignment(entry_t *entry)
+{
+	try_consume(symbol_becomes);
+	item_t item;
+	expr(&item);
+	if (entry)
+		write_store(entry->address);
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
@@ -293,23 +318,29 @@ void stmt()
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
 		if (!entry)
 			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
+		position_t position = current_token.position;
 		scan();
-		if (is_first("assignment", current_token.lexem.symbol))
+		selector(entry);
+		symbol_t symbol = current_token.lexem.symbol;
+		if (is_first("assignment", symbol)) {
+			if (entry->class != class_var)
+				mark_at(error_parser, position, "\"%s\" is not a variable.", entry->id);
 			assignment(entry);
-		else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol))
-			proc_call();
-		else {
+		} else if (is_first("proc_call", symbol) || is_follow("proc_call", symbol)) {
+			proc_call(entry);
+		} else {
 			// Sincroniza
 			mark(error_parser, "Invalid statement.");
-			while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
+			while (!is_follow("stmt", symbol) && symbol != symbol_eof)
 				scan();
 		}
-	}	else if (is_first("if_stmt", current_token.lexem.symbol))
+	}	else if (is_first("if_stmt", current_token.lexem.symbol)) {
 		if_stmt();
-	else if (is_first("while_stmt", current_token.lexem.symbol))
+	} else if (is_first("while_stmt", current_token.lexem.symbol)) {
 		while_stmt();
-	else if (is_first("repeat_stmt", current_token.lexem.symbol))
+	} else if (is_first("repeat_stmt", current_token.lexem.symbol)) {
 		repeat_stmt();
+	}
 	// Sincroniza
 	if (!is_follow("stmt", current_token.lexem.symbol)) {
 		mark(error_parser, "Missing \";\" or \"end\".");

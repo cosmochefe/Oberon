@@ -11,18 +11,28 @@
 
 #include <stdio.h>
 
+//typedef enum _op {
+//	op_nop,
+//	op_add,
+//	op_sub,
+//	op_neg,
+//	op_mul,
+//	op_div,
+//	op_mod,
+//	op_and,
+//	op_or,
+//	op_not
+//} op_t;
+
 // Estas definições determinam o tamanho em bytes dos tipos padrões de dados e endereços
 typedef unsigned char value_t;
 typedef unsigned short address_t;
 
-#include "scanner.h"
-
-void initialize_backend(FILE *file);
-
-void write_load(address_t address);
-void write_load_immediate(value_t value);
-void write_store(address_t address);
-void write_binary_op(symbol_t symbol);
-void write_negate();
+//void initialize_backend(FILE *file);
+//void write_load(address_t address);
+//void write_load_immediate(value_t value);
+//void write_store(address_t address);
+//void write_unary_op(op_t op, item_t *item);
+//void write_binary_op(op_t op, item_t first, item_t second);
 
 #endif

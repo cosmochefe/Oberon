@@ -11,16 +11,10 @@
 #include "backend.h"
 #include "parser.h"
 
-//
-// Constantes, variáveis e definições gerais
-//
-
 const char *input_path  = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Input.txt";
 const char *output_path = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Output.txt";
 
-//
-// Ponto de entrada do programa
-//
+void initialize_backend(FILE *file);
 
 int main(int argc, const char *argv[])
 {
