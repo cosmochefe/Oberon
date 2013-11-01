@@ -1,7 +1,7 @@
 MODULE Sample;
 
 CONST
-	i = 10;
+	max = 10;
 
 TYPE
 	INT = INTEGER;
@@ -11,8 +11,8 @@ TYPE
 	END;
 
 VAR
-	i: INTEGER;
-
+	idade: INTEGER;
+(*
 PROCEDURE Multiply;
 VAR 
 	x, y, z: INTEGER;
@@ -38,9 +38,9 @@ BEGIN Read(n); k := 0;
 	END;
 	Write(i); Write(j); Write(a[j]); WriteLn
 END BinSearch;
-
+*)
 BEGIN
-	i := 0;
-	i := i + 1;
-	Write(i);
+	idade := 0;
+	idade := max - idade;
+	idade := (idade + 3) * 2 + idade;
 END Sample.

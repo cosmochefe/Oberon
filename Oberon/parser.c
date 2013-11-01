@@ -77,6 +77,7 @@ bool scan()
 	return current_token.lexem.symbol == symbol_eof;
 }
 
+// Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
 bool verify(symbol_t symbol, bool mark_error, bool next)
 {
 	if (current_token.lexem.symbol == symbol || symbol == symbol_null) {
@@ -91,54 +92,54 @@ bool verify(symbol_t symbol, bool mark_error, bool next)
 	return false;
 }
 
-// As versões com “try_” não mostram mensagens de erro caso não encontrem o símbolo passado como parâmetro
+static inline bool consume(symbol_t symbol)
+{
+	return verify(symbol, true, true);
+}
 
 // Esta função faz o mesmo que “consume”, mas não avança para a próxima ficha léxica
 static inline bool assert(symbol_t symbol)
 {
 	return verify(symbol, true, false);
 }
-static inline bool try_assert(symbol_t symbol)
-{
-	return verify(symbol, false, false);
-}
 
-// Se “symbol_null” for passado como parâmetro, qualquer símbolo será reconhecido
-static inline bool consume(symbol_t symbol)
-{
-	return verify(symbol, true, true);
-}
+// As versões com “try_” não mostram mensagens de erro caso não encontrem o símbolo passado como parâmetro
 static inline bool try_consume(symbol_t symbol)
 {
 	return verify(symbol, false, true);
 }
 
+static inline bool try_assert(symbol_t symbol)
+{
+	return verify(symbol, false, false);
+}
+
 void expr(item_t *item);
 
 // selector = {"." id | "[" expr "]"}
-void selector(entry_t *entry)
+void selector(item_t *item)
 {
-	if (!entry)
-		return;
+//	if (!item) return;
 	while (is_first("selector", current_token.lexem.symbol)) {
 		if (try_consume(symbol_period)) {
 			// TODO: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
 			consume(symbol_id);
-		} else if (try_assert(symbol_open_bracket)) {
-			position_t open_position = current_token.position;
+		}
+		else if (try_assert(symbol_open_bracket)) {
+			position_t p = current_token.position;
 			scan();
 			// TODO: Verificar se entry é um vetor
 			expr(NULL);
 			if (try_assert(symbol_close_bracket))
 				scan();
 			else
-				mark(error_parser, "Missing closing bracket for (%d, %d).", open_position.line, open_position.column);
-		} else {
-			// Sincroniza
-			mark(error_parser, "Invalid selector.");
-			while (!is_follow("selector", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
-				scan();
+				mark(error_parser, "Missing closing bracket for (%d, %d).", p.line, p.column);
 		}
+//		else {
+//			// Sincroniza
+//			mark(error_parser, "Invalid selector.");
+//			while (!is_follow("selector", current_token.lexem.symbol) && scan());
+//		}
 	}
 }
 
@@ -147,92 +148,101 @@ void write_unary_op(symbol_t symbol, item_t *item);
 // factor = id selector | number | "(" expr ")" | "~" factor
 void factor(item_t *item)
 {
-	if (try_assert(symbol_id)) { // Identificadores (constantes, variáveis e procedimentos)
-		item->addressing = addressing_unknown;
+	if (try_assert(symbol_id)) {
+		// TODO: Remover as verificações para “item” quando possível
+		if (item)
+			item->addressing = addressing_unknown;
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
 		if (!entry)
 			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
 		else {
-			item->addressing = (addressing_t)entry->class;
 			// Como a tabela de símbolos armazena tanto variáveis e constantes, quanto tipos e procedimentos, é possível que o
-			// identificador encontrado não seja útil
-			if (entry->class == class_var) {
-				item->address = entry->address;
-				item->type = entry->type;
-			} else if (entry->class == class_const)
-				item->value = entry->value;
-			else
+			// identificador encontrado não seja um fator válido (variável ou constante)
+			if (entry->class != class_var && entry->class != class_const)
 				mark(error_parser, "\"%s\" is not a valid factor.", current_token.lexem.id);
+			else {
+				if (item) {
+					item->addressing = (addressing_t)entry->class;
+					item->address = entry->address;
+					item->type = entry->type;
+					item->value = entry->value;
+				}
+			}
 		}
 		scan();
-		selector(entry);
-	} else if (try_assert(symbol_number)) { // Numerais
-		item->addressing = addressing_immediate;
-		item->value = current_token.value;
+		selector(item);
+	}
+	else if (try_assert(symbol_number)) {
+		if (item) {
+			item->addressing = addressing_immediate;
+			item->value = current_token.value;
+		}
 		scan();
-	} else if (try_assert(symbol_open_paren)) { // Subexpressões
-		position_t open_position = current_token.position;
+	}
+	else if (try_assert(symbol_open_paren)) {
+		position_t p = current_token.position;
 		scan();
 		expr(item);
 		if (try_assert(symbol_close_paren))
 			scan();
 		else
-			mark(error_parser, "Missing closing parentheses for (%d, %d).", open_position.line, open_position.column);
-	} else if (try_consume(symbol_not)) { // Inversão lógica de outro fator
+			mark(error_parser, "Missing closing parentheses for (%d, %d).", p.line, p.column);
+	}
+	else if (try_consume(symbol_not)) {
 		factor(item);
 		write_unary_op(symbol_not, item);
-	} else {
-		// Sincroniza
+	}
+	else {
 		mark(error_parser, "Missing factor.");
-		while (!is_follow("factor", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
-			scan();
+		// Sincroniza
+		while (!is_follow("factor", current_token.lexem.symbol) && scan());
 	}
 }
 
-void write_binary_op(symbol_t symbol, item_t *first, item_t *second);
+void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item);
 
 // term = factor {("*" | "div" | "mod" | "&") factor}
-void term(item_t *first)
+void term(item_t *item)
 {
-	factor(first);
+	factor(item);
 	while (current_token.lexem.symbol >= symbol_times && current_token.lexem.symbol <= symbol_and) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		item_t second;
-		factor(&second);
-		write_binary_op(symbol, first, &second);
+		item_t rhs_item;
+		factor(&rhs_item);
+		write_binary_op(symbol, item, &rhs_item);
 	}
 }
 
 // simple_expr = ["+" | "-"] term {("+" | "-" | "OR") term}
-void simple_expr(item_t *first)
+void simple_expr(item_t *item)
 {
 	if (try_consume(symbol_plus)) {
-		term(first);
+		term(item);
 	} else if (try_consume(symbol_minus)) {
-		term(first);
-		write_unary_op(symbol_minus, first);
+		term(item);
+		write_unary_op(symbol_minus, item);
 	} else {
-		term(first);
+		term(item);
 	}
 	while (current_token.lexem.symbol >= symbol_plus && current_token.lexem.symbol <= symbol_or) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		item_t second;
-		term(&second);
-		write_binary_op(symbol, first, &second);
+		item_t rhs_item;
+		term(&rhs_item);
+		write_binary_op(symbol, item, &rhs_item);
 	}
 }
 
 // expr = simple_expr [("=" | "#" | "<" | "<=" | ">" | ">=") simple_expr]
-void expr(item_t *first)
+void expr(item_t *item)
 {
-	simple_expr(first);
+	simple_expr(item);
 	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater_equal) {
 		symbol_t symbol = current_token.lexem.symbol;
 		consume(symbol);
-		item_t second;
-		simple_expr(&second);
+		item_t rhs_item;
+		simple_expr(&rhs_item);
 		// TODO: Adicionar comparação
 	}
 }
@@ -302,52 +312,54 @@ void repeat_stmt()
 void write_store(item_t *dest, item_t *orig);
 
 // assignment = ":=" expr
-void assignment(item_t *dest)
+void assignment(item_t *item)
 {
 	try_consume(symbol_becomes);
-	item_t orig;
-	expr(&orig);
-	write_store(dest, &orig);
+	item_t rhs_item;
+	expr(&rhs_item);
+	write_store(item, &rhs_item);
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
 void stmt()
 {
 	if (try_assert(symbol_id)) {
+		item_t item;
+		item.addressing = addressing_unknown;
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
 		if (!entry)
 			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
-		position_t position = current_token.position;
-		scan();
-		selector(entry);
-		if (is_first("assignment", current_token.lexem.symbol)) {
+		else {
 			if (entry->class != class_var)
-				mark_at(error_parser, position, "\"%s\" is not a variable.", entry->id);
-			item_t dest;
-			dest.addressing = addressing_direct;
-			dest.address = entry->address;
-			dest.type = entry->type;
-			assignment(&dest);
-		} else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol)) {
+				mark(error_parser, "\"%s\" is not a variable.", entry->id);
+			else {
+				item.addressing = addressing_register;
+				item.address = entry->address;
+				item.type = entry->type;
+			}
+		}
+		scan();
+		selector(&item);
+		if (is_first("assignment", current_token.lexem.symbol))
+			assignment(&item);
+		else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol))
 			proc_call(entry);
-		} else {
+		else {
 			mark(error_parser, "Invalid statement.");
 			// Sincroniza
-			while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
-				scan();
+			while (!is_follow("stmt", current_token.lexem.symbol) && scan());
 		}
-	}	else if (is_first("if_stmt", current_token.lexem.symbol)) {
-		if_stmt();
-	} else if (is_first("while_stmt", current_token.lexem.symbol)) {
-		while_stmt();
-	} else if (is_first("repeat_stmt", current_token.lexem.symbol)) {
-		repeat_stmt();
 	}
-	// Sincroniza
+	else if (is_first("if_stmt", current_token.lexem.symbol))
+		if_stmt();
+	else if (is_first("while_stmt", current_token.lexem.symbol))
+		while_stmt();
+	else if (is_first("repeat_stmt", current_token.lexem.symbol))
+		repeat_stmt();
 	if (!is_follow("stmt", current_token.lexem.symbol)) {
 		mark(error_parser, "Missing \";\" or \"end\".");
-		while (!is_follow("stmt", current_token.lexem.symbol) && current_token.lexem.symbol != symbol_eof)
-			scan();
+		// Sincroniza
+		while (!is_follow("stmt", current_token.lexem.symbol) && scan());
 	}
 }
 
