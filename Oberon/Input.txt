@@ -5,13 +5,19 @@ CONST
 
 TYPE
 	INT = INTEGER;
+	QUERY = RECORD
+		x: INT;
+	END;
 	FILE = RECORD
 		p: INT;
 		d: ARRAY 32 OF INTEGER;
+		q: INTEGER;
+		query: QUERY;
 	END;
 
 VAR
 	idade: INTEGER;
+	arquivo: FILE;
 (*
 PROCEDURE Multiply;
 VAR 
@@ -40,7 +46,8 @@ BEGIN Read(n); k := 0;
 END BinSearch;
 *)
 BEGIN
+	arquivo.p := 20;
 	idade := 0;
-	idade := max - idade;
-	idade := (idade + 3) * 2 + idade;
+	idade := max - idade + arquivo.p;
+	idade := (idade + 3) * 2 + idade div arquivo.query.x;
 END Sample.

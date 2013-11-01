@@ -117,13 +117,27 @@ static inline bool try_assert(symbol_t symbol)
 void expr(item_t *item);
 
 // selector = {"." id | "[" expr "]"}
-void selector(item_t *item)
+void selector(item_t *item, token_t entry_token)
 {
-//	if (!item) return;
+	position_t p = entry_token.position;
 	while (is_first("selector", current_token.lexem.symbol)) {
 		if (try_consume(symbol_period)) {
-			// TODO: Verificar os campos de entry, caso ele seja um registro. Caso contrário, erro!
-			consume(symbol_id);
+			assert(symbol_id);
+			// TODO: Remover as verificações para “item” quando possível
+			if (!item || !item->type || item->type->form != form_record)
+				mark_at(error_parser, p, "Invalid record.");
+			else {
+				entry_t *field = find_entry(current_token.lexem.id, item->type->fields);
+				if (!field)
+					mark(error_parser, "\"%s\" is not a valid field.", current_token.lexem.id);
+				else {
+					// Lembrando: o endereço do campos (“address”) corresponde ao deslocamento com base no endereço da variável
+					// registro em si e não ao seu endereço atual
+					item->address = item->address + field->address;
+					item->type = field->type;
+				}
+			}
+			scan();
 		}
 		else if (try_assert(symbol_open_bracket)) {
 			position_t p = current_token.position;
@@ -133,7 +147,7 @@ void selector(item_t *item)
 			if (try_assert(symbol_close_bracket))
 				scan();
 			else
-				mark(error_parser, "Missing closing bracket for (%d, %d).", p.line, p.column);
+				mark(error_parser, "Missing \"]\" for (%d, %d).", p.line, p.column);
 		}
 //		else {
 //			// Sincroniza
@@ -150,6 +164,7 @@ void factor(item_t *item)
 {
 	if (try_assert(symbol_id)) {
 		// TODO: Remover as verificações para “item” quando possível
+		token_t entry_token = current_token;
 		if (item)
 			item->addressing = addressing_unknown;
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
@@ -170,7 +185,7 @@ void factor(item_t *item)
 			}
 		}
 		scan();
-		selector(item);
+		selector(item, entry_token);
 	}
 	else if (try_assert(symbol_number)) {
 		if (item) {
@@ -326,6 +341,7 @@ void stmt()
 	if (try_assert(symbol_id)) {
 		item_t item;
 		item.addressing = addressing_unknown;
+		token_t entry_token = current_token;
 		entry_t *entry = find_entry(current_token.lexem.id, symbol_table);
 		if (!entry)
 			mark(error_parser, "\"%s\" hasn't been declared yet.", current_token.lexem.id);
@@ -339,7 +355,7 @@ void stmt()
 			}
 		}
 		scan();
-		selector(&item);
+		selector(&item, entry_token);
 		if (is_first("assignment", current_token.lexem.symbol))
 			assignment(&item);
 		else if (is_first("proc_call", current_token.lexem.symbol) || is_follow("proc_call", current_token.lexem.symbol))
