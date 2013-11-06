@@ -11,8 +11,8 @@
 #include "backend.h"
 #include "parser.h"
 
-const char *input_path  = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Input.txt";
-const char *output_path = "/Users/Neto/Dropbox/Programming/Projects/Oberon/Oberon/Output.txt";
+const char *input_path  = "/Users/Alvaro/Dropbox/Programming/Projects/Oberon/Oberon/Input.txt";
+const char *output_path = "/Users/Alvaro/Dropbox/Programming/Projects/Oberon/Oberon/Output.txt";
 
 void initialize_backend(FILE *file);
 

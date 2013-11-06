@@ -7,10 +7,12 @@ TYPE
 	INT = INTEGER;
 	QUERY = RECORD
 		x: INT;
+    y: INT;
 	END;
 	FILE = RECORD
 		p: INT;
-		d: ARRAY 32 OF INTEGER;
+		d: ARRAY 32 OF QUERY;
+		m: ARRAY 10 OF ARRAY 10 OF ARRAY 10 OF INT;
 		q: INTEGER;
 		query: QUERY;
 	END;
@@ -46,8 +48,6 @@ BEGIN Read(n); k := 0;
 END BinSearch;
 *)
 BEGIN
-	arquivo.p := 20;
-	idade := 0;
-	idade := max - idade + arquivo.p;
-	idade := (idade + 3) * 2 + idade div arquivo.query.x;
+	idade := arquivo.d[idade + 3].x + 255;
+	idade := idade + 3;
 END Sample.

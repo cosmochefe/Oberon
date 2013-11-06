@@ -52,7 +52,8 @@ typedef enum _addressing {
 	addressing_unknown,
 	addressing_direct,
 	addressing_immediate,
-	addressing_register
+	addressing_register,
+	addressing_indirect
 } addressing_t;
 
 typedef struct _item {

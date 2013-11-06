@@ -26,6 +26,8 @@ void initialize_backend(FILE *file)
 	output_file = file;
 }
 
+// TODO: Adicionar comentários por “va_args” nas funções de geração de código
+
 void write_load(item_t *item)
 {
 	if (!item)
@@ -34,9 +36,14 @@ void write_load(item_t *item)
 		fprintf(output_file, "\tLOAD R%d, %d\n", register_index, item->value);
 	else if (item->addressing == addressing_direct)
 		fprintf(output_file, "\tLOAD R%d, [%.4X]\n", register_index, item->address);
+	else if (item->addressing == addressing_indirect) {
+		fprintf(output_file, "\tLOAD R%d, [R%d]\n", item->index, item->index);
+		item->addressing = addressing_register;
+		return;
+	}
 	else
 		return; // TODO: Devo verificar e apontar erro ou deixar como está?
-	item->addressing = addressing_register;
+	item->addressing = addressing_register;	
 	item->index = register_index;
 	register_index++;
 }
@@ -52,6 +59,26 @@ void write_store(item_t *dest, item_t *orig)
 	dest->index = orig->index;
 	// TODO: Se for reaproveitar o destino para as próximas contas, é necessário reduzir o índice de registradores?
 	register_index--;
+}
+
+void write_index_offset(item_t *item, item_t *rhs_item)
+{
+	write_load(rhs_item);
+	fprintf(output_file, "\tMUL R%d, %d\n", rhs_item->index, item->type->base->size);
+	if (item->addressing == addressing_direct) {
+		fprintf(output_file, "\tADD R%d, %d\n", rhs_item->index, item->address);
+		item->index = rhs_item->index;
+		item->addressing = addressing_indirect;
+	}
+	else if (item->addressing == addressing_indirect) {
+		fprintf(output_file, "\tADD R%d, R%d\n", item->index, rhs_item->index);
+		register_index--;
+	}
+}
+
+void write_field_offset(item_t *item, address_t offset)
+{
+	fprintf(output_file, "\tADD R%d, %d\n", item->index, offset);
 }
 
 void write_unary_op(symbol_t symbol, item_t *item)
@@ -144,6 +171,10 @@ void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item)
 			write_load(item);
 			write_load(rhs_item);
 			fprintf(output_file, "\t%s R%d, R%d\n", opcode, item->index, rhs_item->index);
+			if (item->index > rhs_item->index) {
+				fprintf(output_file, "\tMOV R%d, R%d\n", rhs_item->index, item->index);
+				item->index = rhs_item->index;
+			}
 			register_index--;
 		}
 	}

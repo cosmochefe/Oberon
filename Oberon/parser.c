@@ -115,39 +115,68 @@ static inline bool try_assert(symbol_t symbol)
 }
 
 void expr(item_t *item);
+void write_index_offset(item_t *item, item_t *rhs_item);
+void write_field_offset(item_t *item, address_t offset);
 
 // selector = {"." id | "[" expr "]"}
 void selector(item_t *item, token_t entry_token)
 {
-	position_t p = entry_token.position;
+	position_t position = entry_token.position;
 	while (is_first("selector", current_token.lexem.symbol)) {
 		if (try_consume(symbol_period)) {
 			assert(symbol_id);
 			// TODO: Remover as verificações para “item” quando possível
 			if (!item || !item->type || item->type->form != form_record)
-				mark_at(error_parser, p, "Invalid record.");
+				mark_at(error_parser, position, "Invalid record.");
 			else {
 				entry_t *field = find_entry(current_token.lexem.id, item->type->fields);
-				if (!field)
+				if (!field) {
 					mark(error_parser, "\"%s\" is not a valid field.", current_token.lexem.id);
+					// TODO: Mudar o endereçamento ao invés de anular o tipo?
+					item->type = NULL;
+				}
 				else {
-					// Lembrando: o endereço do campos (“address”) corresponde ao deslocamento com base no endereço da variável
-					// registro em si e não ao seu endereço atual
-					item->address = item->address + field->address;
-					item->type = field->type;
+					// Lembrando: o endereço (“address”) do campo corresponde ao seu deslocamento com base no endereço do registro
+					// em si e não ao seu endereço global atual
+          if (item->addressing == addressing_indirect)
+            write_field_offset(item, field->address);
+          else
+            item->address = item->address + field->address;
+          item->type = field->type;
 				}
 			}
+			position = current_token.position;
 			scan();
 		}
 		else if (try_assert(symbol_open_bracket)) {
-			position_t p = current_token.position;
+			position_t open_pos = current_token.position;
 			scan();
-			// TODO: Verificar se entry é um vetor
-			expr(NULL);
+			if (!item || !item->type || item->type->form != form_array)
+				mark_at(error_parser, position, "Invalid array.");
+			else {
+				position_t index_pos = current_token.position;
+				item_t rhs_item;
+				expr(&rhs_item);
+				if (item->addressing != addressing_indirect && rhs_item.addressing == addressing_immediate) {
+					if (rhs_item.value < 0 || rhs_item.value > item->type->length - 1) {
+						mark_at(error_parser, index_pos, "Index is out of bounds.");
+						item->type = NULL;
+					}
+					else {
+						item->address = item->address + (rhs_item.value * item->type->base->size);
+						item->type = item->type->base;
+					}
+				}
+				else {
+					write_index_offset(item, &rhs_item);
+					item->type = item->type->base;
+				}
+			}
+			position = current_token.position;
 			if (try_assert(symbol_close_bracket))
 				scan();
 			else
-				mark(error_parser, "Missing \"]\" for (%d, %d).", p.line, p.column);
+				mark(error_parser, "Missing \"]\" for (%d, %d).", open_pos.line, open_pos.column);
 		}
 //		else {
 //			// Sincroniza
@@ -201,7 +230,7 @@ void factor(item_t *item)
 		if (try_assert(symbol_close_paren))
 			scan();
 		else
-			mark(error_parser, "Missing closing parentheses for (%d, %d).", p.line, p.column);
+			mark(error_parser, "Missing \")\" for (%d, %d).", p.line, p.column);
 	}
 	else if (try_consume(symbol_not)) {
 		factor(item);
@@ -276,7 +305,7 @@ void actual_params()
 	if (try_assert(symbol_close_paren))
 		scan();
 	else
-		mark(error_parser, "Missing closing parentheses for (%d, %d).", open_position.line, open_position.column);
+		mark(error_parser, "Missing \")\" for (%d, %d).", open_position.line, open_position.column);
 }
 
 // proc_call = [actual_params]
