@@ -17,12 +17,14 @@
 
 entry_t *symbol_table;
 address_t current_address;
+entry_t *integer_type;
+entry_t *boolean_type;
 
 bool initialize_table(address_t base_address, entry_t **ref)
 {
 	current_address = base_address;
 	clear_table(ref);
-	// Os tipos elementares (neste caso, apenas “integer”) são as primeiras entradas da tabela de símbolos
+	// Os tipos elementares (“integer” e “boolean”) são as primeiras entradas da tabela de símbolos
 	// Todos os tipos elementares da linguagem devem ser criados e adicionados à tabela nesta função
 	type_t *base_type = create_type(form_atomic, 0, sizeof(value_t), NULL, NULL);
 	if (!base_type) {
@@ -36,6 +38,21 @@ bool initialize_table(address_t base_address, entry_t **ref)
 		return false;
 	}
 	type->type = base_type;
+  integer_type = type;
+	append_entry(type, ref);
+	base_type = create_type(form_atomic, 0, sizeof(value_t), NULL, NULL);
+	if (!base_type) {
+		mark_at(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		return false;
+	}
+	type = create_entry("boolean", position_zero, class_type);
+	if (!type) {
+		mark_at(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
+		free(base_type);
+		return false;
+	}
+	type->type = base_type;
+  boolean_type = type;
 	append_entry(type, ref);
 	return true;
 }

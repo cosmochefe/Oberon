@@ -48,30 +48,31 @@ void write_load(item_t *item)
 	register_index++;
 }
 
-void write_store(item_t *dest, item_t *orig)
+void write_store(item_t *dst_item, item_t *src_item)
 {
-	if (!dest || !orig)
+	if (!dst_item || !src_item)
 		return;
 	// Se o item de origem já estiver em um registrador, a função “write_load” não mudará nada
-	write_load(orig);
-	fprintf(output_file, "\tSTORE [%.4X], R%d\n", dest->address, orig->index);
-	dest->addressing = addressing_register;
-	dest->index = orig->index;
+	write_load(src_item);
+	fprintf(output_file, "\tSTORE [%.4X], R%d\n", dst_item->address, src_item->index);
+	dst_item->addressing = addressing_register;
+	dst_item->index = src_item->index;
 	// TODO: Se for reaproveitar o destino para as próximas contas, é necessário reduzir o índice de registradores?
 	register_index--;
 }
 
-void write_index_offset(item_t *item, item_t *rhs_item)
+void write_index_offset(item_t *item, item_t *index_item)
 {
-	write_load(rhs_item);
-	fprintf(output_file, "\tMUL R%d, %d\n", rhs_item->index, item->type->base->size);
+  // TODO: Adicionar rotina “trap” para índices fora do limite
+	write_load(index_item);
+	fprintf(output_file, "\tMUL R%d, %d\n", index_item->index, item->type->base->size);
 	if (item->addressing == addressing_direct) {
-		fprintf(output_file, "\tADD R%d, %d\n", rhs_item->index, item->address);
-		item->index = rhs_item->index;
+		fprintf(output_file, "\tADD R%d, %d\n", index_item->index, item->address);
+		item->index = index_item->index;
 		item->addressing = addressing_indirect;
 	}
 	else if (item->addressing == addressing_indirect) {
-		fprintf(output_file, "\tADD R%d, R%d\n", item->index, rhs_item->index);
+		fprintf(output_file, "\tADD R%d, R%d\n", item->index, index_item->index);
 		register_index--;
 	}
 }
@@ -153,7 +154,7 @@ void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item)
 				// TODO: Trocar a ordem dos índices para remover a instrução “MOV”
 				write_load(item);
 				fprintf(output_file, "\t%s R%d, R%d\n", opcode, item->index, rhs_item->index);
-				// É necessário mover o resultado para o registrador de menor índice (neste caso, o do segundo operando) para que
+				// É preciso mover o resultado para o registrador de menor índice (neste caso, o do segundo operando) para que
 				// o índice de registradores em uso possa ser reduzido, evitando que a quantidade disponível de registradores
 				// esgote-se
 				fprintf(output_file, "\tMOV R%d, R%d\n", rhs_item->index, item->index);
@@ -178,4 +179,34 @@ void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item)
 			register_index--;
 		}
 	}
+}
+
+void write_comparison(symbol_t symbol, item_t *item, item_t *rhs_item)
+{
+	write_load(item);
+	write_load(rhs_item);
+	fprintf(output_file, "\tCMP R%d, R%d\n", item->index, rhs_item->index);
+	item->addressing = addressing_condition;
+	item->condition = symbol;
+	register_index--;
+}
+
+void write_branch(symbol_t symbol, address_t address)
+{
+	char condition_code[] = "EQ";
+	switch (symbol) {
+		case symbol_equal: strcpy(condition_code, "EQ"); break;
+		case symbol_not_equal: strcpy(condition_code, "NE"); break;
+		case symbol_less: strcpy(condition_code, "LS"); break;
+		case symbol_less_equal: strcpy(condition_code, "LE"); break;
+		case symbol_greater: strcpy(condition_code, "GR"); break;
+		case symbol_greater_equal: strcpy(condition_code, "GE"); break;
+		default: break;
+	}
+	fprintf(output_file, "\tBR%s LBL_%.4X\n", condition_code, address);
+}
+
+void write_fixup(address_t address)
+{
+  fprintf(output_file, "LBL_%.4X:\n", address);
 }

@@ -53,7 +53,8 @@ typedef enum _addressing {
 	addressing_direct,
 	addressing_immediate,
 	addressing_register,
-	addressing_indirect
+	addressing_indirect,
+  addressing_condition
 } addressing_t;
 
 typedef struct _item {
@@ -62,12 +63,15 @@ typedef struct _item {
 	address_t address;	 // Para variáveis na memória
 	value_t value;			 // Para constantes
 	unsigned char index; // Para registradores
+  symbol_t condition;  // Para condicionais
 } item_t;
 
 // TODO: Adicionar árvore de tabelas para gerenciar escopo
 
 extern entry_t *symbol_table;
 extern address_t current_address;
+extern entry_t *integer_type;
+extern entry_t *boolean_type;
 
 type_t *create_type(form_t form, value_t length, unsigned int size, entry_t *fields, type_t *base);
 entry_t *create_entry(identifier_t id, position_t position, class_t class);

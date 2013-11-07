@@ -115,7 +115,7 @@ static inline bool try_assert(symbol_t symbol)
 }
 
 void expr(item_t *item);
-void write_index_offset(item_t *item, item_t *rhs_item);
+void write_index_offset(item_t *item, item_t *index_item);
 void write_field_offset(item_t *item, address_t offset);
 
 // selector = {"." id | "[" expr "]"}
@@ -155,20 +155,20 @@ void selector(item_t *item, token_t entry_token)
 				mark_at(error_parser, position, "Invalid array.");
 			else {
 				position_t index_pos = current_token.position;
-				item_t rhs_item;
-				expr(&rhs_item);
-				if (item->addressing != addressing_indirect && rhs_item.addressing == addressing_immediate) {
-					if (rhs_item.value < 0 || rhs_item.value > item->type->length - 1) {
+				item_t index_item;
+				expr(&index_item);
+				if (item->addressing != addressing_indirect && index_item.addressing == addressing_immediate) {
+					if (index_item.value < 0 || index_item.value > item->type->length - 1) {
 						mark_at(error_parser, index_pos, "Index is out of bounds.");
 						item->type = NULL;
 					}
 					else {
-						item->address = item->address + (rhs_item.value * item->type->base->size);
+						item->address = item->address + (index_item.value * item->type->base->size);
 						item->type = item->type->base;
 					}
 				}
 				else {
-					write_index_offset(item, &rhs_item);
+					write_index_offset(item, &index_item);
 					item->type = item->type->base;
 				}
 			}
@@ -178,11 +178,11 @@ void selector(item_t *item, token_t entry_token)
 			else
 				mark(error_parser, "Missing \"]\" for (%d, %d).", open_pos.line, open_pos.column);
 		}
-//		else {
-//			// Sincroniza
-//			mark(error_parser, "Invalid selector.");
-//			while (!is_follow("selector", current_token.lexem.symbol) && scan());
-//		}
+    //		else {
+    //			// Sincroniza
+    //			mark(error_parser, "Invalid selector.");
+    //			while (!is_follow("selector", current_token.lexem.symbol) && scan());
+    //		}
 	}
 }
 
@@ -278,16 +278,19 @@ void simple_expr(item_t *item)
 	}
 }
 
+void write_comparison(symbol_t symbol, item_t *item, item_t *rhs_item);
+
 // expr = simple_expr [("=" | "#" | "<" | "<=" | ">" | ">=") simple_expr]
 void expr(item_t *item)
 {
 	simple_expr(item);
 	if (current_token.lexem.symbol >= symbol_equal && current_token.lexem.symbol <= symbol_greater_equal) {
-		symbol_t symbol = current_token.lexem.symbol;
-		consume(symbol);
-		item_t rhs_item;
-		simple_expr(&rhs_item);
-		// TODO: Adicionar comparação
+    symbol_t symbol = current_token.lexem.symbol;
+    consume(symbol);
+    item_t rhs_item;
+    simple_expr(&rhs_item);
+    write_comparison(symbol, item, &rhs_item);
+    item->type = boolean_type->type;
 	}
 }
 
@@ -295,17 +298,18 @@ void expr(item_t *item)
 void actual_params()
 {
 	try_assert(symbol_open_paren);
-	position_t open_position = current_token.position;
+	position_t open_pos = current_token.position;
 	scan();
 	if (is_first("expr", current_token.lexem.symbol)) {
-		expr(NULL);
+    item_t item;
+		expr(&item);
 		while (try_consume(symbol_comma))
-			expr(NULL);
+			expr(&item);
 	}
 	if (try_assert(symbol_close_paren))
 		scan();
 	else
-		mark(error_parser, "Missing \")\" for (%d, %d).", open_position.line, open_position.column);
+		mark(error_parser, "Missing \")\" for (%d, %d).", open_pos.line, open_pos.column);
 }
 
 // proc_call = [actual_params]
@@ -316,29 +320,45 @@ void proc_call(entry_t *entry)
 }
 
 void stmt_sequence();
+void write_branch(symbol_t symbol, address_t address);
+void write_fixup(address_t address);
 
 // if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 void if_stmt()
 {
+	address_t end_address = (address_t)current_token.position.index;
 	try_consume(symbol_if);
-	expr(NULL);
+	item_t expr_item;
+	// Cada condicional precisa de um código para gerar o rótulo correto em “write_brach” e “write_fixup”
+	address_t next_address = (address_t)current_token.position.index;
+	expr(&expr_item);
+	write_branch(inverse_condition(expr_item.condition), next_address);
 	consume(symbol_then);
 	stmt_sequence();
 	while (try_consume(symbol_elsif)) {
-		expr(NULL);
+		write_branch(symbol_null, end_address);
+		write_fixup(next_address);
+		next_address = (address_t)current_token.position.index;
+		expr(&expr_item);
+		write_branch(inverse_condition(expr_item.condition), next_address);
 		consume(symbol_then);
 		stmt_sequence();
+		write_branch(symbol_null, end_address);
 	}
-	if (try_consume(symbol_else))
+	if (try_consume(symbol_else)) {
+		write_fixup(next_address);
 		stmt_sequence();
+	}
 	consume(symbol_end);
+	write_fixup(end_address);
 }
 
 // while_stmt = "while" expr "do" stmt_sequence "end"
 void while_stmt()
 {
 	try_consume(symbol_while);
-	expr(NULL);
+	item_t expr_item;
+	expr(&expr_item);
 	consume(symbol_do);
 	stmt_sequence();
 	consume(symbol_end);
@@ -350,18 +370,19 @@ void repeat_stmt()
 	try_consume(symbol_repeat);
 	stmt_sequence();
 	consume(symbol_until);
-	expr(NULL);
+	item_t expr_item;
+	expr(&expr_item);
 }
 
-void write_store(item_t *dest, item_t *orig);
+void write_store(item_t *dst_item, item_t *src_item);
 
 // assignment = ":=" expr
 void assignment(item_t *item)
 {
 	try_consume(symbol_becomes);
-	item_t rhs_item;
-	expr(&rhs_item);
-	write_store(item, &rhs_item);
+	item_t expr_item;
+	expr(&expr_item);
+	write_store(item, &expr_item);
 }
 
 // stmt = [id selector (assignment | proc_call) | if_stmt | while_stmt | repeat_stmt]
@@ -543,7 +564,7 @@ type_t *type()
 entry_t *formal_params_section()
 {
 	if (try_consume(symbol_var));
-		// TODO: Implementar a passagem de parâmetro por referência
+  // TODO: Implementar a passagem de parâmetro por referência
 	entry_t *new_params = id_list();
 	if (!consume(symbol_colon))
 		mark_missing(symbol_colon);
@@ -677,11 +698,11 @@ void var_decl()
 void declarations()
 {
 	if (is_first("const_decl", current_token.lexem.symbol))
-			const_decl();
+    const_decl();
 	if (is_first("type_decl", current_token.lexem.symbol))
-			type_decl();
+    type_decl();
 	if (is_first("var_decl", current_token.lexem.symbol))
-			var_decl();
+    var_decl();
 	while (is_first("proc_decl", current_token.lexem.symbol)) {
 		proc_decl();
 		consume(symbol_semicolon);

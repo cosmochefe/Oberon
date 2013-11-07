@@ -94,6 +94,8 @@ bool is_follow(const char *non_terminal, symbol_t symbol);
 
 char *id_for_symbol(symbol_t symbol);
 
+symbol_t inverse_condition(symbol_t symbol);
+
 void initialize_scanner(FILE *file);
 void read_token();
 

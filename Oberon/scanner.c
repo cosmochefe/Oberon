@@ -465,6 +465,20 @@ char *id_for_symbol(symbol_t symbol)
 	return "unknown";
 }
 
+symbol_t inverse_condition(symbol_t symbol)
+{
+	switch (symbol) {
+		case symbol_equal: return symbol_not_equal; break;
+		case symbol_not_equal: return symbol_equal; break;
+		case symbol_less: return symbol_greater_equal; break;
+		case symbol_less_equal: return symbol_greater; break;
+		case symbol_greater: return symbol_less_equal; break;
+		case symbol_greater_equal: return symbol_less; break;
+		default: break;
+	}
+	return symbol_null;
+}
+
 // A razão de se criar uma função somente para isto é aproveitá-la se a codificação do arquivo de código-fonte mudar
 bool read_char()
 {
