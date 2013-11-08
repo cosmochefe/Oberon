@@ -16,7 +16,7 @@
 #include "errors.h"
 #include "symbol_table.h"
 
-#define REGISTER_INDEX_COUNT 32
+#define REGISTER_INDEX_MAX 31
 
 FILE *output_file = NULL;
 unsigned char register_index = 0;
@@ -27,16 +27,6 @@ void initialize_backend(FILE *file)
 }
 
 // TODO: Adicionar comentários por “va_args” nas funções de geração de código
-
-void inc_index(unsigned char amount)
-{
-	register_index = (register_index + amount) % REGISTER_INDEX_COUNT;
-}
-
-void dec_index(unsigned char amount)
-{
-	register_index = (register_index - amount) % REGISTER_INDEX_COUNT;
-}
 
 void write_load(item_t *item)
 {
@@ -55,7 +45,7 @@ void write_load(item_t *item)
 		return; // TODO: Devo verificar e apontar erro ou deixar como está?
 	item->addressing = addressing_register;	
 	item->index = register_index;
-	inc_index(1);
+	register_index++;
 }
 
 void write_store(item_t *dst_item, item_t *src_item)
@@ -68,7 +58,7 @@ void write_store(item_t *dst_item, item_t *src_item)
 	dst_item->addressing = addressing_register;
 	dst_item->index = src_item->index;
 	// TODO: Se for reaproveitar o destino para as próximas contas, é necessário reduzir o índice de registradores?
-	dec_index(1);
+	register_index--;
 }
 
 void write_index_offset(item_t *item, item_t *index_item)
@@ -83,7 +73,7 @@ void write_index_offset(item_t *item, item_t *index_item)
 	}
 	else if (item->addressing == addressing_indirect) {
 		fprintf(output_file, "\tADD R%d, R%d\n", item->index, index_item->index);
-		dec_index(1);
+		register_index--;
 	}
 }
 
@@ -169,7 +159,7 @@ void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item)
 				// esgote-se
 				fprintf(output_file, "\tMOV R%d, R%d\n", rhs_item->index, item->index);
 				item->index = rhs_item->index;
-				dec_index(1);
+				register_index--;
 				return;
 			}
 			fprintf(output_file, "\t%s R%d, %d\n", opcode, rhs_item->index, item->value);
@@ -186,7 +176,7 @@ void write_binary_op(symbol_t symbol, item_t *item, item_t *rhs_item)
 				fprintf(output_file, "\tMOV R%d, R%d\n", rhs_item->index, item->index);
 				item->index = rhs_item->index;
 			}
-			dec_index(1);
+			register_index--;
 		}
 	}
 }
@@ -198,26 +188,25 @@ void write_comparison(symbol_t symbol, item_t *item, item_t *rhs_item)
 	fprintf(output_file, "\tCMP R%d, R%d\n", item->index, rhs_item->index);
 	item->addressing = addressing_condition;
 	item->condition = symbol;
-	// É necessário liberar ambos os registradores após a comparação
-	dec_index(2);
+	register_index--;
 }
 
-void write_branch(symbol_t symbol, unsigned int code)
+void write_branch(symbol_t symbol, address_t address)
 {
-	char condition_mnemonic[3] = "";
+	char condition_code[] = "EQ";
 	switch (symbol) {
-		case symbol_equal: strcpy(condition_mnemonic, "EQ"); break;
-		case symbol_not_equal: strcpy(condition_mnemonic, "NE"); break;
-		case symbol_less: strcpy(condition_mnemonic, "LS"); break;
-		case symbol_less_equal: strcpy(condition_mnemonic, "LE"); break;
-		case symbol_greater: strcpy(condition_mnemonic, "GR"); break;
-		case symbol_greater_equal: strcpy(condition_mnemonic, "GE"); break;
+		case symbol_equal: strcpy(condition_code, "EQ"); break;
+		case symbol_not_equal: strcpy(condition_code, "NE"); break;
+		case symbol_less: strcpy(condition_code, "LS"); break;
+		case symbol_less_equal: strcpy(condition_code, "LE"); break;
+		case symbol_greater: strcpy(condition_code, "GR"); break;
+		case symbol_greater_equal: strcpy(condition_code, "GE"); break;
 		default: break;
 	}
-	fprintf(output_file, "\tBR%s LBL_%.4X\n", condition_mnemonic, code);
+	fprintf(output_file, "\tBR%s LBL_%.4X\n", condition_code, address);
 }
 
-void write_label(unsigned int code)
+void write_fixup(address_t address)
 {
-  fprintf(output_file, "LBL_%.8X:\n", code);
+  fprintf(output_file, "LBL_%.4X:\n", address);
 }

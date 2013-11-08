@@ -320,75 +320,64 @@ void proc_call(entry_t *entry)
 }
 
 void stmt_sequence();
-void write_branch(symbol_t symbol, unsigned int code);
-void write_label(unsigned int code);
+void write_branch(symbol_t symbol, address_t address);
+void write_fixup(address_t address);
 
 // if_stmt = "if" expr "then" stmt_sequence {"elsif" expr "then" stmt_sequence} ["else" stmt_sequence] "end"
 void if_stmt()
 {
-	bool label_end = false;
-	bool label_next = true;
-	unsigned int end_code = (unsigned int)current_token.position.index;
+	address_t end_address = (address_t)current_token.position.index;
+	bool jump_to_end = false;
 	try_consume(symbol_if);
 	item_t expr_item;
-	// Cada condicional precisa de um código para gerar o rótulo correto em “write_branch” e “write_label”
-	unsigned int next_code = (unsigned int)current_token.position.index;
+	// Cada condicional precisa de um código para gerar o rótulo correto em “write_brach” e “write_fixup”
+	address_t next_address = (address_t)current_token.position.index;
 	expr(&expr_item);
-	write_branch(inverse_condition(expr_item.condition), next_code);
+	write_branch(inverse_condition(expr_item.condition), next_address);
 	consume(symbol_then);
 	stmt_sequence();
 	while (try_consume(symbol_elsif)) {
-		label_end = true;
-		write_branch(symbol_null, end_code);
-		write_label(next_code);
-		next_code = (unsigned int)current_token.position.index;
+		jump_to_end = true;
+		write_branch(symbol_null, end_address);
+		write_fixup(next_address);
+		next_address = (address_t)current_token.position.index;
 		expr(&expr_item);
-		write_branch(inverse_condition(expr_item.condition), next_code);
+		write_branch(inverse_condition(expr_item.condition), next_address);
 		consume(symbol_then);
 		stmt_sequence();
+		write_branch(symbol_null, end_address);
 	}
 	if (try_consume(symbol_else)) {
-		label_end = true;
-		label_next = false;
-		write_branch(symbol_null, end_code);
-		write_label(next_code);
+		jump_to_end = true;
+		write_fixup(next_address);
 		stmt_sequence();
 	}
 	consume(symbol_end);
-	if (label_next)
-		write_label(next_code);
-	if (label_end)
-		write_label(end_code);
+	if (jump_to_end)
+		write_fixup(end_address);
+	else 
+		write_fixup(next_address);
 }
 
 // while_stmt = "while" expr "do" stmt_sequence "end"
 void while_stmt()
 {
-	unsigned int back_code = (unsigned int)current_token.position.index;
-	write_label(back_code);
 	try_consume(symbol_while);
 	item_t expr_item;
 	expr(&expr_item);
-	unsigned int end_code = (unsigned int)current_token.position.index;
-	write_branch(inverse_condition(expr_item.condition), end_code);
 	consume(symbol_do);
 	stmt_sequence();
-	write_branch(symbol_null, back_code);
 	consume(symbol_end);
-	write_label(end_code);
 }
 
 // repeat_stmt = "repeat" stmt_sequence "until" expr
 void repeat_stmt()
 {
 	try_consume(symbol_repeat);
-	unsigned int back_code = (unsigned int)current_token.position.index;
-	write_label(back_code);
 	stmt_sequence();
 	consume(symbol_until);
 	item_t expr_item;
 	expr(&expr_item);
-	write_branch(inverse_condition(expr_item.condition), back_code);
 }
 
 void write_store(item_t *dst_item, item_t *src_item);
