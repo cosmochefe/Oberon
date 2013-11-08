@@ -64,6 +64,7 @@ typedef struct _item {
 	value_t value;			 // Para constantes
 	unsigned char index; // Para registradores
   symbol_t condition;  // Para condicionais
+	fpos_t link;
 } item_t;
 
 // TODO: Adicionar árvore de tabelas para gerenciar escopo
