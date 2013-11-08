@@ -50,14 +50,20 @@ END BinSearch;
 BEGIN
 	idade := arquivo.d[idade + 3].x + 255;
 	idade := idade + 3;
+	WHILE idade < 10 DO
+		idade := idade + 1;
+		REPEAT
+			idade := idade * 2
+		UNTIL idade = 8
+	END;
 	IF idade > 5 THEN
 		idade := 0
-(*
 	ELSIF idade = 5 THEN
 		idade := 1
-	ELSE
+	ELSIF idade = 7 THEN
 		idade := 2
-*)
+	ELSE
+		idade := 3
 	END;
 	idade := idade MOD 3
 END Sample.

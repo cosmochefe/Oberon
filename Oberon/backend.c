@@ -188,25 +188,26 @@ void write_comparison(symbol_t symbol, item_t *item, item_t *rhs_item)
 	fprintf(output_file, "\tCMP R%d, R%d\n", item->index, rhs_item->index);
 	item->addressing = addressing_condition;
 	item->condition = symbol;
-	register_index--;
+	// É necessário liberar ambos os registradores após a comparação
+	register_index -= 2;
 }
 
-void write_branch(symbol_t symbol, address_t address)
+void write_branch(symbol_t symbol, unsigned int code)
 {
-	char condition_code[] = "EQ";
+	char condition_mnemonic[3] = "";
 	switch (symbol) {
-		case symbol_equal: strcpy(condition_code, "EQ"); break;
-		case symbol_not_equal: strcpy(condition_code, "NE"); break;
-		case symbol_less: strcpy(condition_code, "LS"); break;
-		case symbol_less_equal: strcpy(condition_code, "LE"); break;
-		case symbol_greater: strcpy(condition_code, "GR"); break;
-		case symbol_greater_equal: strcpy(condition_code, "GE"); break;
+		case symbol_equal: strcpy(condition_mnemonic, "EQ"); break;
+		case symbol_not_equal: strcpy(condition_mnemonic, "NE"); break;
+		case symbol_less: strcpy(condition_mnemonic, "LS"); break;
+		case symbol_less_equal: strcpy(condition_mnemonic, "LE"); break;
+		case symbol_greater: strcpy(condition_mnemonic, "GR"); break;
+		case symbol_greater_equal: strcpy(condition_mnemonic, "GE"); break;
 		default: break;
 	}
-	fprintf(output_file, "\tBR%s LBL_%.4X\n", condition_code, address);
+	fprintf(output_file, "\tBR%s LBL_%.4X\n", condition_mnemonic, code);
 }
 
-void write_fixup(address_t address)
+void write_label(unsigned int code)
 {
-  fprintf(output_file, "LBL_%.4X:\n", address);
+  fprintf(output_file, "LBL_%.8X:\n", code);
 }
