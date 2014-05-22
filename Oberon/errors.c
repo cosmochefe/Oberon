@@ -97,7 +97,12 @@ void mark_missing(symbol_t symbol)
 	if (symbol == symbol_id)
 		mark(error_parser, "Missing identifier.");
 	else if (symbol == symbol_number)
-		mark(error_parser, "Missing number.");
+		mark(error_parser, "Missing integer.");
 	else
 		mark(error_parser, "Missing \"%s\".", id_for_symbol(symbol));
+}
+
+void mark_not_enough_memory()
+{
+	mark_at(error_fatal, position_zero, "Not enough memory. By the way, who are you and what the hell is 42?");
 }
