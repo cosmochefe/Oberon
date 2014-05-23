@@ -89,9 +89,6 @@ extern token_t current_token, last_token;
 
 extern const position_t position_zero;
 
-bool is_first(const char *non_terminal, symbol_t symbol);
-bool is_follow(const char *non_terminal, symbol_t symbol);
-
 char *id_for_symbol(symbol_t symbol);
 
 symbol_t inverse_condition(symbol_t symbol);
